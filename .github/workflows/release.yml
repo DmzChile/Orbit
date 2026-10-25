@@ -23,6 +23,8 @@ jobs:
           $package = Get-Content -Raw package.json | ConvertFrom-Json
           if ("v$($package.version)" -ne $env:GITHUB_REF_NAME) { throw 'Tag must match package version' }
       - run: npm ci
+      - name: Ensure Electron runtime
+        run: node node_modules/electron/install.js
       - run: npm run lint
       - run: npm test
       - run: npm run test:e2e

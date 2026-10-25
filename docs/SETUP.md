@@ -12,6 +12,8 @@
 
 ## 앱 업데이트 배포와 확인
 
+새 개발/CI 환경에서 npm이 의존성 설치 스크립트를 실행하지 않으면 npm ci 후 `node node_modules/electron/install.js`로 공식 Electron 실행 파일을 설치합니다. 검증/배포 workflow는 이 단계를 명시적으로 실행합니다. 타입 검사·번들 빌드만 통과하고 Electron binary가 없는 상태를 앱 실행 검증 성공으로 간주하지 않습니다.
+
 - 배포 담당자는 package.json/lockfile 버전을 변경하고 검증 후 정확히 일치하는 v<version> 태그를 push합니다. release.yml은 Windows 검사·E2E·NSIS 생성·packaged 실행을 통과한 경우에만 공개 릴리스를 만듭니다. PR 생성 자체는 릴리스/설치 완료가 아닙니다.
 - GitHub Releases에는 같은 빌드의 NSIS exe, exe.blockmap, latest.yml이 함께 있어야 합니다. 패키지 안 resources/app-update.yml은 DmzChile/Orbit에 고정됩니다. 앱의 GitHub 개인 토큰을 업데이트 피드에 전달하지 않습니다. 공개 업데이트 읽기는 별도 API 키가 필요 없습니다.
 - electron-updater 6.8.11(MIT, electron-builder 26 호환)을 사용합니다. production 라이선스 고지는 빌드 시 재생성됩니다. 자동 다운로드·일반 종료 시 자동 설치·prerelease·downgrade·web installer는 비활성입니다. NSIS 다운로드의 SHA-512 검증과 공급자의 구성된 서명 검증을 끄지 않습니다. 현재 빌드는 미서명입니다.

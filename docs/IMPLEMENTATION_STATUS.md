@@ -11,6 +11,7 @@
 - 실제 패키지 앱과 NSIS 바이트를 임시 loopback 피드로 검사: HTTP503 오류, 잘못된 SHA-512 거부, 정상 다운로드·크기/해시 일치, 재시작 선택 대기, 일반 종료 시 자동 설치 금지·데이터 보존. fixture 메타데이터99.0.0은 테스트 전용이며 installerExecuted=false다. 재현 명령은 npm run package -- --publish never 후 npm run test:packaged / npm run test:update-package다.
 - SHIP-01 전체는 진행 중: 공개 릴리스 부재로 실제 두 공개 릴리스 간 설치/업데이트/rollback은 미실행이다. 태그/릴리스를 발행하거나 사용자의 앱을 설치하지 않았다. updater가 없는0.1.3이하는 최초1회 새 버전 설치가 필요하다. 이번 수동 GitHub 결과 게시와 실제 앱 자동 수신/ChatGPT 예약 실행도 별도 상태다.
 - 원 요청이 text를 지정했으므로 공개 검증 보고서는 docs/requests/issue-1-result.txt 한 파일이다. 파일의 LF를 고정해 GitHub Actions artifact에 기록할 체크섬을 재현한다. 다른 요청 문서를 일괄 업로드하지 않는다.
+- 원격 CI 초회도 npm ci 후 Electron binary가 없어 E2E 시작 전에 실패했다. 검증/배포 workflow에 공식 node_modules/electron/install.js 실행을 명시해 새 환경의 실행 의존성을 복원한다. 로컬 앱 기능 검증과 원격 CI 상태를 구분한다.
 
 **전체 제품 완료 상태가 아니다.** 로컬 Windows 앱과 공급자/원격 실행기 코드를 구현했으며 실제 뉴스와 로컬 데이터, 배포 exe를 검증했다. 운영 자격증명·정책/runner·서명/업데이트 인프라는 제공되지 않았다. 코드 존재와 mock/실제 원격 실행을 구별한다.
 
