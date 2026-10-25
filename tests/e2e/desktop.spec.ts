@@ -205,28 +205,77 @@ test("CAL-02/03/07 · weekly occurrence edit and confirmed delete keep series ex
   await app.close();
 });
 
-test("UX-05/06 · actual orbital light motion respects app and OS reduced motion", async () => {
-  const app = await launch(await mkdtemp(join(tmpdir(), "orbit-motion-"))),
+test("UX-05/06 · reference orbit trails reuse the same paths and respect reduced motion", async () => {
+  const app = await launch(await mkdtemp(join(tmpdir(), "orbit-trails-"))),
     page = await app.firstWindow();
-  const light = page.locator(".story .satellite-light");
-  await expect(light).toHaveCount(1);
-  const start = await light.evaluate(
-    (el) => getComputedStyle(el).offsetDistance,
+  const scene = page.locator(".story .orbit-scene"),
+    trail = scene.locator(".orbit-trail").first();
+  await expect(scene.locator(".orbit-geometry")).toHaveCount(7);
+  expect(
+    await scene
+      .locator(".orbit-trail")
+      .evaluateAll(
+        (nodes) => new Set(nodes.map((node) => node.getAttribute("href"))).size,
+      ),
+  ).toBe(7);
+  await expect(scene.locator("text, polygon")).toHaveCount(0);
+  await expect(page.locator(".satellite-light, .satellite-track")).toHaveCount(
+    0,
+  );
+  const samples = await trail.evaluate(async (el) => {
+    const values = new Set<string>();
+    for (let n = 0; n < 18; n++) {
+      await new Promise(requestAnimationFrame);
+      values.add(getComputedStyle(el).strokeDashoffset);
+    }
+    return values.size;
+  });
+  expect(samples).toBeGreaterThan(10);
+  const start = await trail.evaluate(
+    (el) => getComputedStyle(el).strokeDashoffset,
   );
   await expect
-    .poll(() => light.evaluate((el) => getComputedStyle(el).offsetDistance))
+    .poll(() => trail.evaluate((el) => getComputedStyle(el).strokeDashoffset))
     .not.toBe(start);
+  const lengths = await scene
+    .locator(".orbit-back .orbit-lane")
+    .first()
+    .locator(".orbit-trail")
+    .evaluateAll((nodes) =>
+      nodes.map((node) =>
+        Number(node.getAttribute("stroke-dasharray")?.split(" ")[0]),
+      ),
+    );
+  expect(lengths[0]).toBeGreaterThan(lengths.at(-1)!);
   await page.screenshot({ path: "test-results/windows-orbit-motion.png" });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(light).toHaveCSS("animation-name", "none");
-  await expect(page.locator(".story .planet-system")).toHaveCSS(
-    "animation-name",
-    "none",
-  );
+  await expect(trail).toHaveCSS("animation-name", "none");
+  await expect(trail).toHaveCSS("visibility", "hidden");
+  await expect(scene.locator(".planet")).toHaveCount(1);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page
     .getByRole("checkbox", { name: "모션 줄이기", exact: true })
     .check();
-  await expect(light).toHaveCSS("animation-name", "none");
+  await expect(trail).toHaveCSS("animation-name", "none");
+  await expect(trail).toHaveCSS("visibility", "hidden");
+  await app.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0].setBounds({ width: 640, height: 540 });
+  });
+  await expect(page.locator(".story")).toBeVisible();
+  const text = await page.locator(".story h2").evaluate((el) => {
+    const title = el.getBoundingClientRect(),
+      card = el.closest(".story")!.getBoundingClientRect();
+    return {
+      client: el.clientWidth,
+      scroll: el.scrollWidth,
+      left: title.left,
+      right: title.right,
+      cardLeft: card.left,
+      cardRight: card.right,
+    };
+  });
+  expect(text.scroll).toBeLessThanOrEqual(text.client);
+  expect(text.left).toBeGreaterThanOrEqual(text.cardLeft);
+  expect(text.right).toBeLessThanOrEqual(text.cardRight);
   await app.close();
 });

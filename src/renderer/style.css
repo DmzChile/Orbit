@@ -332,9 +332,14 @@ nav {
   position: relative;
   overflow: hidden;
   border-radius: 16px;
-  background: var(--navy);
+  background: radial-gradient(
+    ellipse at 83% 50%,
+    #244b61 0%,
+    #19384e 37%,
+    #173047 76%
+  );
   color: #fff;
-  min-height: 204px;
+  min-height: 228px;
   padding: 24px;
   cursor: pointer;
 }
@@ -343,6 +348,8 @@ nav {
   line-height: 1.45;
   letter-spacing: -1px;
   margin: 11px 0 10px;
+  max-width: 64%;
+  text-wrap: pretty;
   position: relative;
   z-index: 1;
 }
@@ -368,100 +375,42 @@ nav {
 }
 .sculpture {
   position: absolute;
-  width: 290px;
-  height: 240px;
-  right: -5px;
-  top: 0;
+  width: 440px;
+  height: 280px;
+  right: -28px;
+  top: 50%;
+  transform: translateY(-50%);
   pointer-events: none;
 }
-.planet-system {
-  position: absolute;
-  inset: 0;
-  isolation: isolate;
-  animation: float 6s ease-in-out infinite;
+.orbit-scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
-.satellite-track {
-  position: absolute;
-  left: 63px;
-  top: 54px;
-  width: 192px;
-  height: 86px;
-  border: 1px solid #b5e8ed42;
-  border-radius: 50%;
+.orbit-stars {
+  opacity: 0.3;
 }
-.satellite-light {
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #f3ffff;
-  box-shadow:
-    0 0 8px 3px #a3e7edb0,
-    0 0 21px 6px #8ccfd340;
-  offset-path: ellipse(96px 43px at 159px 97px);
-  offset-rotate: 0deg;
-  offset-distance: 12%;
-  z-index: 3;
-  animation:
-    satellite-revolve 8s linear infinite,
-    satellite-depth 8s steps(1, end) infinite;
+.orbit-path,
+.orbit-trail {
+  fill: none;
+  stroke: #b9e0e1;
+  stroke-width: 0.7;
 }
-@keyframes satellite-revolve {
+.orbit-trail {
+  stroke: #e1f6ed;
+  stroke-linecap: round;
+  stroke-dashoffset: var(--wake-length);
+  animation: orbit-wake var(--orbit-duration) linear infinite;
+  animation-delay: var(--orbit-delay);
+}
+@keyframes orbit-wake {
   from {
-    offset-distance: 12%;
+    stroke-dashoffset: var(--wake-length);
   }
   to {
-    offset-distance: 112%;
+    stroke-dashoffset: calc(var(--wake-length) - 100px);
   }
-}
-@keyframes satellite-depth {
-  0%,
-  88% {
-    z-index: 3;
-  }
-  38% {
-    z-index: 1;
-  }
-}
-.planet {
-  position: absolute;
-  left: 100px;
-  top: 38px;
-  width: 118px;
-  height: 118px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 28% 20%, #bddfd8, #5c99a2 58%, #255467);
-  box-shadow: inset -14px -6px 18px #0e34464a;
-  z-index: 2;
-}
-.orbit {
-  position: absolute;
-  width: 290px;
-  height: 110px;
-  left: 0;
-  top: 70px;
-  border: 1px solid #76b5bd64;
-  border-radius: 50%;
-  transform: rotate(32deg);
-  animation: breathe 5s ease-in-out infinite;
-}
-.orbit:nth-child(2) {
-  width: 330px;
-  height: 150px;
-  left: -20px;
-  top: 48px;
-}
-.orbit:nth-child(3) {
-  width: 370px;
-  height: 190px;
-  left: -40px;
-  top: 28px;
-}
-.orbit:nth-child(4) {
-  width: 410px;
-  height: 230px;
-  left: -60px;
-  top: 8px;
 }
 .calendar-mini .month {
   margin-bottom: 14px;
@@ -949,14 +898,14 @@ label.field {
 }
 .reader .article-visual {
   height: 200px;
-  background: var(--navy);
+  background: radial-gradient(ellipse at 65% 40%, #244b61, #173047 75%);
   border-radius: 16px;
   position: relative;
   overflow: hidden;
 }
 .article-visual .sculpture {
-  right: calc(50% - 145px);
-  top: -10px;
+  right: calc(50% - 190px);
+  top: 50%;
 }
 .article-visual > p {
   position: absolute;
@@ -1060,26 +1009,6 @@ a {
     transform: none;
   }
 }
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-9px);
-  }
-}
-@keyframes breathe {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: rotate(32deg);
-  }
-  50% {
-    opacity: 1;
-    transform: rotate(37deg);
-  }
-}
 @keyframes progress {
   from {
     width: 0;
@@ -1118,9 +1047,13 @@ body.reduce *:after {
   animation: none !important;
   transition: none !important;
 }
-body.reduce .planet,
-body.reduce .orbit {
-  animation: none !important;
+body.reduce .orbit-trail {
+  visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .orbit-trail {
+    visibility: hidden;
+  }
 }
 @media (min-width: 1500px) {
   .content {
@@ -1156,8 +1089,8 @@ body.reduce .orbit {
     font-size: 25px;
   }
   .story .sculpture {
-    right: -75px;
-    opacity: 0.8;
+    right: -66px;
+    opacity: 0.75;
   }
   .story h2 {
     font-size: 24px;
@@ -1299,8 +1232,8 @@ body.reduce .orbit {
     font-size: 24px;
   }
   .story .sculpture {
-    right: -100px;
-    opacity: 0.55;
+    right: -122px;
+    opacity: 0.45;
   }
   .news-card h2 {
     font-size: 16px;
@@ -1484,7 +1417,7 @@ button:disabled {
   color: #fff;
 }
 .story h2 {
-  max-width: 72%;
+  max-width: calc(100% - 222px);
   overflow-wrap: anywhere;
   font-size: 1.8rem;
 }
@@ -1827,7 +1760,7 @@ small {
     grid-template-columns: 1.5fr 1fr;
   }
   .story h2 {
-    max-width: 80%;
+    max-width: calc(100% - 184px);
     font-size: 1.55rem;
   }
   .widget-grid {

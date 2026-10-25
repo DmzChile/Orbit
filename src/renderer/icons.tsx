@@ -29,18 +29,4 @@ export function Icon({ name }: { name: string }) {
     </span>
   );
 }
-export function Sculpture() {
-  return (
-    <div className="sculpture" aria-hidden="true">
-      <i className="orbit" />
-      <i className="orbit" />
-      <i className="orbit" />
-      <i className="orbit" />
-      <div className="planet-system">
-        <div className="satellite-track" />
-        <div className="planet" />
-        <i className="satellite-light" />
-      </div>
-    </div>
-  );
-}
+export { Sculpture } from "./Sculpture";

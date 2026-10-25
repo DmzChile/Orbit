@@ -1,6 +1,6 @@
 # 기술 결정0002 — 사용자 관리 ChatGPT 예약, 한국 RSS와 공전
 
-채택 · 2026-10-25 Asia/Seoul · 요구사항1.1 · NEWS-01~06 / AUTO-01~05 / RES-01 / UX-05~07
+예약/뉴스 채택, 행성 모션은 기술 결정0003으로 대체 · 2026-10-25 Asia/Seoul · 요구사항1.1 · NEWS-01~06 / AUTO-01~05 / RES-01 / UX-05~07
 
 사용자가 ChatGPT 예약을 직접 작성해 GitHub에 접근하고 GPT API 키 없이 쓰겠다고 요청했다. 뉴스는 키 없는 한국 언론사 공식 RSS를 선택했다. 따라서 새 요청은 chatgpt-external 공급자로 저장한다. Orbit은 요청 Issue·예약 정의·고정 수동 큐를 전달하고, 외부 작업용 프롬프트를 로컬 clipboard로 복사한다. workflow 검사/dispatch나 OpenAI API 호출이 필요하지 않다. 외부 ChatGPT에서 예약을 생성/수정했다고 표시하지 않는다.
 
