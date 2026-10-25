@@ -22,9 +22,9 @@
 
 - Figma: https://www.figma.com/design/CqTx3gChx5Uok7QIeYrZde?node-id=2-8
 - Figma 화면: `2:8` Today, `2:9` Customize, `2:10` Calendar, `2:11` Automations, `2:12` Results, `2:13` News reader.
-- HTML: `orbit-ui-prototype.html`. 보관 링크: https://chatgpt.com/library?file_id=libfile_2fb4043c773081919b0feca051fb61b8&account_id=personal
+- HTML: [`../design/orbit-ui-prototype.html`](../design/orbit-ui-prototype.html). 보관 링크: https://chatgpt.com/library?file_id=libfile_2fb4043c773081919b0feca051fb61b8&account_id=personal
 - HTML SHA-256: `be739461d689d4d24532e70493226ed5987aa14df779028cddfdfbd4521f21e7`.
-- HTML은 저장소에 아직 포함되지 않았다. 링크에 접근할 수 없으면 아래 상세 명세로 구현하고, 접근하지 못한 원본을 확인했다고 말하지 않는다. 소스 제공 시 해시로 버전을 확인한다.
+- HTML 원본은 `design/orbit-ui-prototype.html`에 포함되어 있다. 저장소를 내려받아 해당 파일을 브라우저로 열면 UI와 모션을 확인할 수 있다. 실행 안내는 [`../design/README.md`](../design/README.md)를 따른다. 접근하지 못한 Figma 원본을 확인했다고 말하지 않는다.
 - 알려진 Figma 한계: 호출 한도로 화면 클릭 연결과 모션이 미적용되어 있고, 캘린더의 일정 저장 버튼이 잘리는 레이아웃 문제가 남아 있다. 해당 문제는 제품에 재현하지 않는다. HTML은 브라우저 시각 검증 대신 구문 및 DOM 상호작용 검증을 거친 UI 데모다.
 
 ### 1.2 범위 구분
