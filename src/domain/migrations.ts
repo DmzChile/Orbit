@@ -1,5 +1,5 @@
 import { OrbitError, stateSchema, type AppState } from "./model";
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 // External-provider records are not readable by 0.1.0. Mark them as a future
 // schema so older apps preserve the data instead of treating it as corruption.
 const migrations: Record<
@@ -7,6 +7,7 @@ const migrations: Record<
   (record: Record<string, unknown>) => Record<string, unknown>
 > = {
   1: (record) => ({ ...record, schemaVersion: 2 }),
+  2: (record) => ({ ...record, schemaVersion: 3 }),
 };
 export function parseStoredState(value: unknown): AppState {
   if (!value || typeof value !== "object")

@@ -27,6 +27,10 @@ test("E2E-01 · actual public news, saved article, restart and request reference
     await expect(page.locator(".article-list .inbox-item").first()).toBeVisible(
       { timeout: 100000 },
     );
+    await page.getByRole("button", { name: "정치", exact: true }).click();
+    await expect(
+      page.locator(".article-list .inbox-item").first(),
+    ).toBeVisible();
     const title = await page.locator(".article-list h3").first().innerText();
     await page.getByRole("searchbox", { name: "기사 검색" }).fill(title);
     await expect(page.locator(".article-list h3").first()).toHaveText(title);
@@ -50,6 +54,11 @@ test("E2E-01 · actual public news, saved article, restart and request reference
       await readFile(join(directory, "state.json"), "utf8"),
     );
     expect(data.articles.length).toBeGreaterThan(0);
+    expect(
+      data.articles.some((article: { topics: string[] }) =>
+        article.topics.includes("정치"),
+      ),
+    ).toBe(true);
     expect(data.savedArticles).toHaveLength(1);
     expect(data.articles[0].source).toBe("동아일보");
     expect(data.settings.readerScale).toBeGreaterThan(1);

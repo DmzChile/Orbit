@@ -11,7 +11,7 @@
 | event.save / event.delete | 이벤트 version, UTC·지역 시각·IANA 시간대, all/this 범위, 발생 날짜 |
 | board.save | Board version과 안정적 위젯 ID; 충돌은 저장 거부 |
 | session.complete | 위젯·실제 일정 참조와 완료 기록 |
-| news.refresh / news.more / news.save | 실제 기사 수집 페이지(24개)·중복 제거·저장 관계 |
+| news.refresh / news.more / news.save | 정치 포함 공식 분야별 RSS의 균형 페이지(24개)·중복 제거·저장 관계; refresh/more 응답은 count와 부분 실패 warning |
 | quote | symbol + stock/index, 독립 캐시/인증/오류 |
 | connect / disconnect | provider + 입력한 키; 암호문만 별도 저장, renderer에 키 반환 없음 |
 | repos / branches / activity | 페이지 최대 100; 앱 허용 저장소 검사와 GitHub 권한 검증 |
@@ -40,3 +40,6 @@ Request/Run/Artifact는 `src/domain/model.ts`가 실행 가능한 계약이다. 
 기사 검색은 로컬 캐시(최대 1,000개)이며 주제 분류는 제목 키워드이다. 보드는 최대 40개 위젯, 동일 종류 중복을 허용하며 순서 기반 CSS grid에 S/M/L 크기를 배치해 충돌 없이 재정렬한다. 대시보드와 편집기는 같은 board ID를 사용한다.
 
 일정 DST 정책: 존재하지 않거나 중복되는 지역 시각의 직접 입력은 거부한다. 반복에서 그런 시각은 건너뛴다. 종료 일시는 exclusive이며 종일도 다음 날 자정을 종료로 사용한다. 반복 횟수는 예외/건너뛴 발생을 포함한 원래 발생 기준으로 센다.
+
+
+정치 주제를 포함하는 로컬 스키마는3이다.1/2→3 이전 시 원본 버전 백업을 보존하며 과거 앱은 미래 스키마를 덮어쓰지 않는다. 메인 뉴스의8초 타이머는 표시 순환만 담당하며 원격 실행/예약/성공 상태를 만들지 않는다.

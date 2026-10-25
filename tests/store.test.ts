@@ -107,16 +107,39 @@ it("DATA-01 · preserves prior API requests while adding the default external-re
   expect(restored.settings.resultAuthors).toEqual([]);
   expect(restored.savedArticles).toEqual(["hn:saved"]);
   expect(restored.requests[0].provider).toBe("github-actions-openai");
-  expect(restored.schemaVersion).toBe(2);
+  expect(restored.schemaVersion).toBe(3);
   expect(
     JSON.parse(await readFile(join(dir, "state.json.v1.backup"), "utf8")),
   ).toMatchObject({ schemaVersion: 1, savedArticles: ["hn:saved"] });
   expect(
     JSON.parse(await readFile(join(dir, "state.json"), "utf8")),
-  ).toMatchObject({ schemaVersion: 2 });
+  ).toMatchObject({ schemaVersion: 3 });
   await reopened.reset();
   await expect(
     readFile(join(dir, "state.json.v1.backup")),
   ).rejects.toMatchObject({ code: "ENOENT" });
   await reopened.close();
+});
+
+it("DATA-01 · upgrades v2 without losing saved state and removes its backup on reset", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "orbit-v2-")),
+    store = new Store(dir);
+  await store.init();
+  await store.close();
+  const previous = JSON.parse(await readFile(join(dir, "state.json"), "utf8"));
+  previous.schemaVersion = 2;
+  previous.savedArticles = ["saved-v2"];
+  await writeFile(join(dir, "state.json"), JSON.stringify(previous));
+  const upgraded = new Store(dir),
+    state = await upgraded.init();
+  expect(state.schemaVersion).toBe(3);
+  expect(state.savedArticles).toEqual(["saved-v2"]);
+  expect(
+    JSON.parse(await readFile(join(dir, "state.json.v2.backup"), "utf8")),
+  ).toMatchObject({ schemaVersion: 2, savedArticles: ["saved-v2"] });
+  await upgraded.reset();
+  await expect(
+    readFile(join(dir, "state.json.v2.backup")),
+  ).rejects.toMatchObject({ code: "ENOENT" });
+  await upgraded.close();
 });

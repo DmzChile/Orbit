@@ -2,8 +2,15 @@ import { createHash } from "node:crypto";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { articleSchema, OrbitError, type Article } from "../domain/model";
 import type { NewsProvider } from "./providers";
+import { classifyNews, newsSlides, type NewsTopic } from "../domain/news";
 
-const FEED = "https://rss.donga.com/total.xml";
+const FEEDS: { name: string; url: string; topic?: NewsTopic }[] = [
+  { name: "전체", url: "https://rss.donga.com/total.xml" },
+  { name: "정치", url: "https://rss.donga.com/politics.xml", topic: "정치" },
+  { name: "과학", url: "https://rss.donga.com/science.xml", topic: "테크" },
+  { name: "경제", url: "https://rss.donga.com/economy.xml", topic: "금융" },
+  { name: "도서", url: "https://rss.donga.com/book.xml", topic: "학습" },
+];
 const LIMIT = 2 * 1024 * 1024;
 const entities: Record<string, string> = {
   amp: "&",
@@ -37,6 +44,7 @@ function plain(value: unknown): string {
 export function parseKoreanNews(
   xml: string,
   fetchedAt = new Date().toISOString(),
+  section?: NewsTopic,
 ): Article[] {
   if (
     Buffer.byteLength(xml) > LIMIT ||
@@ -80,21 +88,7 @@ export function parseKoreanNews(
     url.hash = "";
     for (const key of [...url.searchParams.keys()])
       if (/^utm_|^(ref|fbclid)$/i.test(key)) url.searchParams.delete(key);
-    const topics: Article["topics"] = [];
-    if (
-      /과학|기술|인공지능|반도체|로봇|디지털|소프트웨어|AI|IT|테크/i.test(title)
-    )
-      topics.push("테크");
-    if (/우주|행성|위성|천문|달\s*탐사|나사|NASA|로켓|은하/i.test(title))
-      topics.push("우주");
-    if (
-      /금융|경제|증시|주식|투자|은행|금리|환율|코스피|코스닥|부동산|물가|기업|시장/i.test(
-        title,
-      )
-    )
-      topics.push("금융");
-    if (/학습|교육|학교|대학|공부|연구|도서|독서|책|수능/i.test(title))
-      topics.push("학습");
+    const topics = classifyNews(title, section);
     const article = articleSchema.parse({
       id: `donga:${createHash("sha256").update(url.href).digest("hex").slice(0, 24)}`,
       title,
@@ -121,60 +115,102 @@ export function parseKoreanNews(
     b.publishedAt.localeCompare(a.publishedAt),
   );
 }
+async function fetchFeed(url: string, topic?: NewsTopic): Promise<Article[]> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      signal: AbortSignal.timeout(20000),
+      redirect: "error",
+      headers: {
+        Accept: "application/rss+xml, application/xml, text/xml",
+        "User-Agent": "Orbit/0.1 personal RSS reader",
+      },
+    });
+  } catch {
+    throw new OrbitError(
+      "OFFLINE",
+      "한국 뉴스에 연결하지 못했습니다. 네트워크를 확인하세요.",
+    );
+  }
+  if (!response.ok)
+    throw new OrbitError(
+      response.status === 429 ? "RATE_LIMIT" : "PROVIDER_ERROR",
+      `한국 뉴스 공급자 응답 오류 (${response.status}).`,
+    );
+  const reader = response.body?.getReader();
+  if (!reader)
+    throw new OrbitError("PROVIDER_DATA", "뉴스 응답이 비어 있습니다.");
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const part = await reader.read();
+      if (part.done) break;
+      size += part.value.length;
+      if (size > LIMIT)
+        throw new OrbitError(
+          "PROVIDER_DATA",
+          "뉴스 응답 크기가 한도를 넘었습니다.",
+        );
+      chunks.push(part.value);
+    }
+  } catch (error) {
+    if (error instanceof OrbitError) throw error;
+    throw new OrbitError(
+      "OFFLINE",
+      "한국 뉴스 전송이 중단되었습니다. 기존 캐시를 유지합니다.",
+    );
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+  return parseKoreanNews(
+    Buffer.concat(chunks).toString("utf8"),
+    new Date().toISOString(),
+    topic,
+  );
+}
 export class KoreanNewsProvider implements NewsProvider {
   private rows?: Article[];
+  public warning = "";
   async fetchPage(page: number): Promise<Article[]> {
     if (!Number.isInteger(page) || page < 0)
       throw new OrbitError("INVALID_PAGE", "올바르지 않은 뉴스 페이지입니다.");
     if (page === 0 || !this.rows) {
-      let response: Response;
-      try {
-        response = await fetch(FEED, {
-          signal: AbortSignal.timeout(20000),
-          redirect: "error",
-          headers: {
-            Accept: "application/rss+xml, application/xml, text/xml",
-            "User-Agent": "Orbit/0.1 personal RSS reader",
-          },
-        });
-      } catch {
-        throw new OrbitError(
-          "OFFLINE",
-          "한국 뉴스에 연결하지 못했습니다. 네트워크를 확인하세요.",
-        );
-      }
-      if (!response.ok)
-        throw new OrbitError(
-          response.status === 429 ? "RATE_LIMIT" : "PROVIDER_ERROR",
-          `한국 뉴스 공급자 응답 오류 (${response.status}).`,
-        );
-      const reader = response.body?.getReader();
-      if (!reader)
-        throw new OrbitError("PROVIDER_DATA", "뉴스 응답이 비어 있습니다.");
-      const chunks: Uint8Array[] = [];
-      let size = 0;
-      try {
-        for (;;) {
-          const part = await reader.read();
-          if (part.done) break;
-          size += part.value.length;
-          if (size > LIMIT)
-            throw new OrbitError(
-              "PROVIDER_DATA",
-              "뉴스 응답 크기가 한도를 넘었습니다.",
-            );
-          chunks.push(part.value);
+      const results = await Promise.allSettled(
+        FEEDS.map((feed) => fetchFeed(feed.url, feed.topic)),
+      );
+      const rows = new Map<string, Article>(),
+        failed: string[] = [];
+      results.forEach((result, index) => {
+        if (result.status === "rejected") {
+          failed.push(FEEDS[index].name);
+          return;
         }
-      } catch (error) {
-        if (error instanceof OrbitError) throw error;
+        for (const article of result.value) {
+          const previous = rows.get(article.id);
+          rows.set(article.id, {
+            ...article,
+            topics: [
+              ...new Set([...(previous?.topics ?? []), ...article.topics]),
+            ],
+          });
+        }
+      });
+      if (!rows.size) {
+        const failure = results.find((result) => result.status === "rejected");
+        if (failure?.status === "rejected") throw failure.reason;
         throw new OrbitError(
-          "OFFLINE",
-          "한국 뉴스 전송이 중단되었습니다. 기존 캐시를 유지합니다.",
+          "PROVIDER_DATA",
+          "뉴스 기사가 없습니다. 기존 캐시를 유지합니다.",
         );
-      } finally {
-        await reader.cancel().catch(() => {});
       }
-      this.rows = parseKoreanNews(Buffer.concat(chunks).toString("utf8"));
+      // A stable, balanced snapshot makes all available fields visible on page one.
+      this.rows = newsSlides([...rows.values()], rows.size).map(
+        (slide) => slide.article,
+      );
+      this.warning = failed.length
+        ? `${failed.join("·")} RSS를 불러오지 못했습니다. 수집된 기사와 기존 캐시를 표시합니다.`
+        : "";
     }
     return this.rows.slice(page * 24, (page + 1) * 24);
   }

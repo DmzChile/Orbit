@@ -176,6 +176,27 @@ describe("NEWS-01/02/05 · Korean official RSS, isolated fixture XML", () => {
     });
     expect(rows[0].url).not.toContain("utm_source");
   });
+  it("keeps the official politics section even when the title has no politics keyword", () => {
+    const rows = parseKoreanNews(
+      xml(item(1, "새로운 발표 내용")),
+      "2026-10-25T12:00:00Z",
+      "정치",
+    );
+    expect(rows[0].topics).toEqual(["정치"]);
+  });
+  it("reports a partial section failure while retaining successful real-feed rows", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        url.includes("politics.xml")
+          ? new Response(null, { status: 503 })
+          : new Response(xml(item(1))),
+      ),
+    );
+    const provider = new KoreanNewsProvider();
+    expect(await provider.fetchPage(0)).toHaveLength(1);
+    expect(provider.warning).toContain("정치 RSS");
+  });
   it("rejects DTD/entity input, HTML errors and unsafe external links", () => {
     for (const value of [
       "<html>error</html>",
@@ -199,9 +220,9 @@ describe("NEWS-01/02/05 · Korean official RSS, isolated fixture XML", () => {
     expect(new Set([...first, ...second, ...third].map((a) => a.id)).size).toBe(
       50,
     );
-    expect(mock).toHaveBeenCalledTimes(1);
+    expect(mock).toHaveBeenCalledTimes(5);
     await provider.fetchPage(0);
-    expect(mock).toHaveBeenCalledTimes(2);
+    expect(mock).toHaveBeenCalledTimes(10);
   });
 });
 

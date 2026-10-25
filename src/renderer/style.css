@@ -1860,3 +1860,66 @@ small {
 .widget .row > .small-input {
   flex: 0 0 65px;
 }
+
+/* Keep the reference planet mounted while only the headline changes. */
+.spotlight-copy {
+  animation: spotlight-copy-in 320ms ease-out;
+}
+.spotlight-copy h2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+@keyframes spotlight-copy-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.spotlight-topics {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.spotlight-topics button {
+  min-height: 34px;
+  padding: 6px 12px;
+}
+.spotlight-footer {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.spotlight-caption {
+  min-width: 0;
+  flex: 1 1 180px;
+}
+.spotlight-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-left: auto;
+}
+.spotlight-controls .btn {
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+}
+.spotlight-controls small {
+  white-space: nowrap;
+  margin-right: 2px;
+}
+.spotlight-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

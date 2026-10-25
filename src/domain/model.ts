@@ -1,3 +1,4 @@
+import { NEWS_TOPICS } from "./news";
 import { z } from "zod";
 import { Temporal } from "@js-temporal/polyfill";
 export const iso = z.string().datetime();
@@ -140,7 +141,7 @@ export const articleSchema = z.object({
   sourceUrl: safeUrl,
   publishedAt: iso,
   fetchedAt: iso,
-  topics: z.array(z.enum(["테크", "우주", "금융", "학습"])),
+  topics: z.array(z.enum(NEWS_TOPICS)),
   summary: z.string().max(10000),
   summaryKind: z.enum(["publisher", "metadata"]),
   readingMinutes: z.number().int().min(0),
@@ -318,7 +319,7 @@ export const settingsSchema = z.object({
 });
 export type Settings = z.infer<typeof settingsSchema>;
 export const stateSchema = z.object({
-  schemaVersion: z.literal(2),
+  schemaVersion: z.literal(3),
   version: z.number().int().min(0),
   workspaceId: id,
   createdAt: iso,
@@ -361,7 +362,7 @@ export type AppState = z.infer<typeof stateSchema>;
 export function initialState(): AppState {
   const now = new Date().toISOString();
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     version: 0,
     workspaceId: crypto.randomUUID(),
     createdAt: now,

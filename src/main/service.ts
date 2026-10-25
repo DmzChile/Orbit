@@ -213,7 +213,7 @@ export class Service {
             d.newsFetchedAt = now();
           });
           this.page = page;
-          return { count: articles.length };
+          return { count: articles.length, warning: this.news.warning };
         } finally {
           this.newsBusy = false;
           this.changed();

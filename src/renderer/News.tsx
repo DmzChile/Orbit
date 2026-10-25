@@ -11,6 +11,7 @@ import {
   type Feedback,
 } from "./main";
 import { Sculpture } from "./icons";
+import { NEWS_TOPICS } from "../domain/news";
 export function NewsPage({
   state,
   selected,
@@ -36,14 +37,15 @@ export function NewsPage({
         a.topics.includes(topic as Article["topics"][number])) &&
       `${a.title} ${a.source}`.toLowerCase().includes(query.toLowerCase()),
   );
-  const article = selected ?? items[0];
+  const article = items.find((item) => item.id === selected?.id) ?? items[0];
   async function fetchNews(more = false) {
     setBusy(true);
     setError("");
     try {
-      const result = await api<{ count: number }>(
+      const result = await api<{ count: number; warning?: string }>(
         more ? "news.more" : "news.refresh",
       );
+      if (result.warning) setError(result.warning);
       if (!result.count) feedback("더 이상 기사가 없어요.");
     } catch (e) {
       setError(errorText(e));
@@ -84,7 +86,7 @@ export function NewsPage({
     <>
       <Head
         title="발견하고, 읽고, 연결하세요."
-        sub="한국 뉴스 · 동아일보 공식 RSS. 검색은 수집한 기사 캐시에서 수행하며 주제는 제목 키워드로 분류합니다."
+        sub="한국 뉴스 · 동아일보 공식 RSS. 검색은 수집한 기사 캐시에서 수행하며 주제는 공식 RSS 분야와 제목 키워드로 분류합니다."
         action={
           <Button onClick={() => void fetchNews()} disabled={busy}>
             {busy ? "불러오는 중…" : "새로고침"}
@@ -103,7 +105,7 @@ export function NewsPage({
             />
           </label>
           <div className="row wrap">
-            {["추천", "테크", "우주", "금융", "학습"].map((t) => (
+            {["추천", ...NEWS_TOPICS].map((t) => (
               <button
                 className={`pill ${topic === t ? "" : "gray"}`}
                 aria-pressed={topic === t}

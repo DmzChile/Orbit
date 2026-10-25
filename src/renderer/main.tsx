@@ -13,7 +13,8 @@ import { BoardPage, Widgets } from "./Widgets";
 import { Automations, Results } from "./Work";
 import { SettingsPage } from "./Settings";
 import { NewsPage } from "./News";
-import { Icon, Sculpture } from "./icons";
+import { Icon } from "./icons";
+import { NewsSpotlight } from "./NewsSpotlight";
 import { agenda, localDate, monthCells } from "../domain/calendar";
 import "./style.css";
 import { inQuietHours } from "../domain/notifications";
@@ -103,6 +104,7 @@ export function App() {
     [message, setMessage] = useState(""),
     [fatal, setFatal] = useState(""),
     [article, setArticle] = useState<Article>(),
+    [articleNavigation, setArticleNavigation] = useState(0),
     [calendarDate, setCalendarDate] = useState<string>(),
     [draftRef, setDraftRef] = useState<Request["refs"]>([]),
     [requestSeed, setRequestSeed] = useState<Request>(),
@@ -300,6 +302,7 @@ export function App() {
               }}
               openArticle={(a) => {
                 setArticle(a);
+                setArticleNavigation((value) => value + 1);
                 go("news");
               }}
               feedback={setMessage}
@@ -311,6 +314,7 @@ export function App() {
           )}
           <div hidden={page !== "news"}>
             <NewsPage
+              key={articleNavigation}
               state={state}
               selected={article}
               onSelected={setArticle}
@@ -405,7 +409,6 @@ function Home({
   const today = localDate(new Date().toISOString(), state.settings.timezone),
     date = new Date(`${today}T12:00:00`),
     items = agenda(state.events, today, state.settings.timezone),
-    article = state.articles[0],
     last = state.runs.at(-1),
     cells = monthCells(
       date.getFullYear(),
@@ -424,50 +427,13 @@ function Home({
         }
       />
       <div className="top-grid">
-        <section className="card news-card">
-          <div className="row between">
-            <h2>새로운 시선, 오늘의 이야기</h2>
-            <button className="text-button" onClick={() => go("news")}>
-              뉴스 모두 보기 →
-            </button>
-          </div>
-          <button
-            className="story story-button"
-            onClick={() => (article ? openArticle(article) : go("news"))}
-          >
-            <Sculpture />
-            <Pill>{article?.topics[0] ?? "DISCOVER"}</Pill>
-            <h2>
-              {article?.title ?? (
-                <>
-                  관심 있는 이야기에서,
-                  <br />
-                  새로운 가능성으로.
-                </>
-              )}
-            </h2>
-            <p>
-              {article
-                ? `${article.source} · ${dateText(article.publishedAt)}`
-                : "실제 기사를 불러오고, 다음 아이디어로 연결하세요."}
-            </p>
-          </button>
-          <div className="story-bottom">
-            <div>
-              <h3>
-                {article
-                  ? "나만의 속도로 읽고 저장하세요."
-                  : "아직 수집한 뉴스가 없어요."}
-              </h3>
-              <small>
-                {state.newsFetchedAt
-                  ? `수집 ${dateText(state.newsFetchedAt)}`
-                  : "뉴스에서 새로고침을 눌러 시작하세요."}
-              </small>
-            </div>
-            <Icon name="arrow" />
-          </div>
-        </section>
+        <NewsSpotlight
+          articles={state.articles}
+          fetchedAt={state.newsFetchedAt}
+          reduceMotion={state.settings.reduceMotion}
+          openArticle={openArticle}
+          openNews={() => go("news")}
+        />
         <section className="card calendar-mini">
           <div className="row between month">
             <h3>

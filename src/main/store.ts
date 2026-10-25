@@ -158,6 +158,7 @@ export class Store {
       `${this.file}.backup`,
       `${this.file}.corrupt`,
       `${this.file}.v1.backup`,
+      `${this.file}.v2.backup`,
     ])
       await unlink(name).catch((e) => {
         if (e.code !== "ENOENT") throw e;
