@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "enabled": false,
+  "repository": "OWNER/REPOSITORY",
+  "model": "SET_AN_API_MODEL_AVAILABLE_TO_YOUR_PROJECT",
+  "maxMinutes": 10,
+  "maxTokens": 60000,
+  "validationScripts": ["test", "build", "typecheck"],
+  "allowDependencyInstall": true,
+  "maxFileBytes": 1000000,
+  "maxSourceBytes": 30000000
+}

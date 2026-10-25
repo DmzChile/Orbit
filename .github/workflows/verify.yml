@@ -1,0 +1,45 @@
+name: Verify Orbit
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Ensure Electron runtime
+        run: node node_modules/electron/install.js
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run test:e2e
+      - run: npm run package
+      - run: npm run test:packaged
+      - run: npm run test:update-package
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: orbit-windows-validation
+          path: |
+            test-results/
+            work-evidence/packaged-smoke.json
+            work-evidence/packaged-update-smoke.json
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
+          retention-days: 14
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: orbit-issue-1-result
+          path: docs/requests/issue-1-result.txt
+          retention-days: 14

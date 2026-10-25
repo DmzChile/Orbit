@@ -1,0 +1,12 @@
+node_modules/
+dist/
+release/
+playwright-report/
+test-results/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.orbit-local/
+work-evidence/

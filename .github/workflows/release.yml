@@ -1,0 +1,39 @@
+name: Release Orbit update
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Check version tag
+        shell: pwsh
+        run: |
+          $package = Get-Content -Raw package.json | ConvertFrom-Json
+          if ("v$($package.version)" -ne $env:GITHUB_REF_NAME) { throw 'Tag must match package version' }
+      - run: npm ci
+      - name: Ensure Electron runtime
+        run: node node_modules/electron/install.js
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:e2e
+      - run: npm run package
+      - run: npm run test:packaged
+      - run: npm run test:update-package
+      - name: Publish installer and update manifest
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME release/*.exe release/*.blockmap release/latest.yml --verify-tag --title "Orbit $env:GITHUB_REF_NAME" --notes 'Unsigned Windows x64 build. Updates preserve saved user data; installation requires user confirmation.'
