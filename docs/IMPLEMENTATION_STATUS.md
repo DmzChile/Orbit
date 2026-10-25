@@ -12,6 +12,7 @@
 - SHIP-01 전체는 진행 중: 공개 릴리스 부재로 실제 두 공개 릴리스 간 설치/업데이트/rollback은 미실행이다. 태그/릴리스를 발행하거나 사용자의 앱을 설치하지 않았다. updater가 없는0.1.3이하는 최초1회 새 버전 설치가 필요하다. 이번 수동 GitHub 결과 게시와 실제 앱 자동 수신/ChatGPT 예약 실행도 별도 상태다.
 - 원 요청이 text를 지정했으므로 공개 검증 보고서는 docs/requests/issue-1-result.txt 한 파일이다. 파일의 LF를 고정해 GitHub Actions artifact에 기록할 체크섬을 재현한다. 다른 요청 문서를 일괄 업로드하지 않는다.
 - 원격 CI 초회도 npm ci 후 Electron binary가 없어 E2E 시작 전에 실패했다. 검증/배포 workflow에 공식 node_modules/electron/install.js 실행을 명시해 새 환경의 실행 의존성을 복원한다. 로컬 앱 기능 검증과 원격 CI 상태를 구분한다.
+- 원격 재검증에서 Windows E2E7개는 통과했으나 electron-builder 26의 CI 암묵 업로드가 GH_TOKEN 부재로 패키징을 실패 처리했다. package/package:dir의 기본값에 --publish never를 고정해 검증 job은 빌드만 하고, 태그 배포의 명시적 릴리스 단계만 업로드하도록 수정했다.
 
 **전체 제품 완료 상태가 아니다.** 로컬 Windows 앱과 공급자/원격 실행기 코드를 구현했으며 실제 뉴스와 로컬 데이터, 배포 exe를 검증했다. 운영 자격증명·정책/runner·서명/업데이트 인프라는 제공되지 않았다. 코드 존재와 mock/실제 원격 실행을 구별한다.
 

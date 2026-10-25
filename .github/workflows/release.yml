@@ -28,7 +28,7 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run test:e2e
-      - run: npm run package -- --publish never
+      - run: npm run package
       - run: npm run test:packaged
       - run: npm run test:update-package
       - name: Publish installer and update manifest
