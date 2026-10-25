@@ -1,0 +1,79 @@
+name: Orbit worker
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Orbit request Issue number (blank scans durable queue)'
+        type: string
+        required: false
+  schedule:
+    - cron: '3-58/5 * * * *'
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: read
+concurrency:
+  group: orbit-worker-${{ github.repository }}
+  cancel-in-progress: false
+jobs:
+  execute:
+    if: vars.ORBIT_RUNTIME_REF != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout reviewed Orbit runtime
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: DmzChile/Orbit
+          ref: ${{ vars.ORBIT_RUNTIME_REF }}
+          path: orbit-runtime
+          persist-credentials: false
+      - name: Verify immutable runtime pin
+        env:
+          ORBIT_REF: ${{ vars.ORBIT_RUNTIME_REF }}
+        run: |
+          [[ "$ORBIT_REF" =~ ^[a-f0-9]{40}$ ]] || exit 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: orbit-runtime/package-lock.json
+      - name: Install reviewed dependencies and build worker
+        working-directory: orbit-runtime
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+        run: |
+          npm ci
+          npm run build
+          docker pull node:24-bookworm-slim
+      - name: Install Korean PDF font
+        run: sudo apt-get update -qq && sudo apt-get install -y fonts-nanum
+      - name: Run durable queue
+        working-directory: orbit-runtime
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ORBIT_ISSUE_NUMBER: ${{ inputs.issue_number }}
+          ORBIT_ARTIFACT_ROOT: ${{ runner.temp }}/orbit-artifacts
+          ORBIT_PDF_FONT: /usr/share/fonts/truetype/nanum/NanumGothic.ttf
+        run: node dist/worker.mjs scan
+      - name: Upload real run files
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: orbit-results-${{ github.run_id }}
+          path: ${{ runner.temp }}/orbit-artifacts/
+          retention-days: 14
+          if-no-files-found: ignore
+          include-hidden-files: false
+      - name: Confirm uploads and publish results
+        if: always()
+        working-directory: orbit-runtime
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ORBIT_ARTIFACT_ROOT: ${{ runner.temp }}/orbit-artifacts
+        run: node dist/worker.mjs finalize
