@@ -15,6 +15,7 @@ import { SettingsPage } from "./Settings";
 import { NewsPage } from "./News";
 import { Icon } from "./icons";
 import { NewsSpotlight } from "./NewsSpotlight";
+import { UpdatePanel } from "./Updates";
 import { agenda, localDate, monthCells } from "../domain/calendar";
 import "./style.css";
 import { inQuietHours } from "../domain/notifications";
@@ -208,6 +209,7 @@ export function App() {
         <span>나의 하루를 이어주는 작은 공간</span>
         <span className="caption-space" />
       </header>
+      <UpdatePanel banner />
       <div className="shell">
         <aside>
           <div className="brand">
@@ -262,6 +264,7 @@ export function App() {
           <div className="sidebar-actions">
             <button
               className={`nav ${page === "settings" ? "active" : ""}`}
+              aria-label="설정 및 연결"
               onClick={() => go("settings")}
             >
               <Icon name="settings" />

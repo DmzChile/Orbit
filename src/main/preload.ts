@@ -21,5 +21,11 @@ const api: OrbitAPI = {
     return () => ipcRenderer.removeListener("orbit:navigate", listener);
   },
   window: (action) => ipcRenderer.send("orbit:window", action),
+  onUpdate: (fn) => {
+    const listener = (_e: unknown, state: Parameters<typeof fn>[0]) =>
+      fn(state);
+    ipcRenderer.on("orbit:update", listener);
+    return () => ipcRenderer.removeListener("orbit:update", listener);
+  },
 };
 contextBridge.exposeInMainWorld("orbit", api);

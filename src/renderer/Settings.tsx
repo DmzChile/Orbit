@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AppState, Settings } from "../domain/model";
 import { api, Button, errorText, Head, Pill, type Feedback } from "./main";
+import { UpdatePanel } from "./Updates";
 export function SettingsPage({
   state,
   feedback,
@@ -486,10 +487,11 @@ export function SettingsPage({
         <section className="card form">
           <h2>앱 정보 및 진단</h2>
           <p>Orbit {connection?.version ?? "0.1.0"} · Windows 11 x64</p>
+          <UpdatePanel />
           <small>
-            현재 빌드는 서명되지 않았습니다. 자동 업데이트는 배포 인프라 설정
-            전까지 비활성입니다. 새 설치 파일로 업데이트하거나 이전 설치 파일로
-            되돌릴 수 있으며 사용자 데이터는 유지됩니다.
+            현재 빌드는 서명되지 않았습니다. 새 버전이 배포되면 앱 상단에서
+            다운로드하고 재시작하여 설치할 수 있습니다. 설치 전 작성 중인 내용을
+            저장하세요. 저장된 일정과 보드는 유지됩니다.
           </small>
           <Button
             onClick={() =>

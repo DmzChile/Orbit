@@ -418,5 +418,6 @@ export interface OrbitAPI {
   onChange(fn: () => void): () => void;
   onTransfer(fn: (progress: TransferProgress) => void): () => void;
   onNavigate(fn: (id: string) => void): () => void;
+  onUpdate(fn: (state: import("./updates").UpdateState) => void): () => void;
   window(action: "minimize" | "maximize" | "close"): void;
 }

@@ -1315,10 +1315,15 @@ textarea {
 }
 .app {
   max-width: none;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .titlebar {
   height: 44px;
+  flex-shrink: 0;
   -webkit-app-region: drag;
   position: sticky;
   top: 0;
@@ -1330,17 +1335,55 @@ textarea {
   width: 132px;
 }
 .shell {
-  min-height: calc(100vh - 44px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+}
+.shell aside nav {
+  display: grid;
 }
 aside {
-  position: sticky;
-  top: 44px;
-  align-self: start;
-  height: calc(100vh - 44px);
+  position: static;
+  align-self: stretch;
+  height: auto;
+  min-height: 0;
   overflow-y: auto;
 }
 .content {
+  min-height: 0;
   overflow: auto;
+}
+.update-notice {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 24px;
+  background: var(--soft);
+  border-bottom: 1px solid var(--line);
+}
+.update-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.update-copy small {
+  display: block;
+}
+.update-copy progress {
+  width: min(260px, 100%);
+  accent-color: var(--blue);
+}
+.update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.update-panel {
+  display: grid;
+  gap: 12px;
 }
 .sidebar-actions input {
   width: auto;
@@ -1788,6 +1831,12 @@ small {
   }
   .news-list {
     display: flex;
+  }
+  .sidebar-actions {
+    display: grid;
+  }
+  .sidebar-actions label {
+    display: none;
   }
   .titlebar > span:nth-child(2) {
     max-width: 50%;

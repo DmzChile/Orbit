@@ -15,6 +15,8 @@ import { Store } from "./store";
 import { Vault } from "./vault";
 import { Service } from "./service";
 import { writeDiagnostic } from "./log";
+import { autoUpdater } from "electron-updater";
+import { Updates } from "./updates";
 let window: BrowserWindow | undefined, store: Store, service: Service;
 let quitting = false;
 let timer: NodeJS.Timeout;
@@ -74,6 +76,20 @@ async function start() {
     },
   });
   const change = () => window?.webContents.send("orbit:changed");
+  // app-update.yml fixes the provider; renderer input cannot select feeds or paths.
+  autoUpdater.logger = null;
+  const updates = new Updates(
+    autoUpdater,
+    app.getVersion(),
+    app.isPackaged && process.platform === "win32",
+    (state) => window?.webContents.send("orbit:update", state),
+  );
+  const startTimer = () =>
+    setInterval(() => {
+      void service.poll();
+      void service.reminders().catch(() => {});
+      void updates.check(false);
+    }, 15000);
   service = new Service(
     store,
     new Vault(app.getPath("userData")),
@@ -114,6 +130,64 @@ async function start() {
       const p = z
         .object({ op: z.string().max(80), data: z.unknown().optional() })
         .parse(payload);
+      if (quitting)
+        throw new OrbitError(
+          "VALIDATION",
+          "앱을 종료하고 있어요. 잠시 기다려 주세요.",
+        );
+      if (p.op.startsWith("updates.")) {
+        z.undefined().parse(p.data);
+        let data;
+        if (p.op === "updates.state") data = updates.snapshot();
+        else if (p.op === "updates.check") data = await updates.check();
+        else if (p.op === "updates.online") data = await updates.check(false);
+        else if (p.op === "updates.download") data = await updates.download();
+        else if (p.op === "updates.install") {
+          if (updates.snapshot().status !== "downloaded")
+            throw new OrbitError(
+              "VALIDATION",
+              "먼저 업데이트를 다운로드하세요.",
+            );
+          const answer = await dialog.showMessageBox(window!, {
+            type: "question",
+            title: "Orbit 업데이트",
+            message: "Orbit을 재시작하고 업데이트를 설치할까요?",
+            detail:
+              "저장된 일정과 보드는 유지됩니다. 작성 중인 내용은 먼저 저장하세요.",
+            buttons: ["취소", "재시작 및 설치"],
+            defaultId: 0,
+            cancelId: 0,
+            noLink: true,
+          });
+          if (answer.response !== 1) data = updates.snapshot();
+          else
+            data = await updates.install(
+              async () => {
+                quitting = true;
+                clearInterval(timer);
+                const bounds = window!.getNormalBounds();
+                await store.update((d) => {
+                  d.settings.window = {
+                    ...bounds,
+                    maximized: window!.isMaximized(),
+                  };
+                });
+                await store.close();
+              },
+              async () => {
+                await store.close();
+                await store.init();
+                quitting = false;
+                timer = startTimer();
+              },
+            );
+        } else
+          throw new OrbitError(
+            "VALIDATION",
+            "지원하지 않는 업데이트 동작입니다.",
+          );
+        return { ok: true, data };
+      }
       return { ok: true, data: await service.call(p.op, p.data) };
     } catch (error) {
       const code =
@@ -155,12 +229,11 @@ async function start() {
     if (saved?.maximized) window?.maximize();
   });
   await window.loadURL(expected);
-  timer = setInterval(() => {
-    void service.poll();
-    void service.reminders().catch(() => {});
-  }, 15000);
+  timer = startTimer();
+  void updates.check(false);
   void service.poll();
   powerMonitor.on("resume", () => {
+    void updates.check(false);
     void service.poll(true).catch(() => {});
     void service.reminders().catch(() => {});
   });

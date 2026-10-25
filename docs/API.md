@@ -1,5 +1,11 @@
 # 경계와 API 계약
 
+## 앱 업데이트 (0.1.4)
+
+`updates.state`, `updates.check`, `updates.online`, `updates.download`, `updates.install`은 data 없이만 호출한다. 기존 sender/frame 검증과 Reply 포맷을 적용한다. feed URL·토큰·경로·명령 인자를 renderer에서 받지 않는다. `updates.online`은 backoff를 지키고 직접 `check`는 즉시 확인한다. `install`은 다운로드 완료 상태와 native 확인 후에만 실행한다.
+
+`orbit:update`/`OrbitAPI.onUpdate`는 `UpdateState`를 전달한다: status(idle/checking/available/downloading/downloaded/installing/error/unavailable/unsupported), currentVersion, version?, percent?, checkedAt?, message, retry?(check/download). 준비 완료 상태는 일반 확인으로 지우지 않는다. 내려받기/검증 오류 뒤에는 설치를 허용하지 않는다. 개발 실행은 unsupported다. 실제 업데이트 네트워크·검증·설치는 main의 electron-updater 경계가 수행한다.
+
 전송은 샌드박스 renderer → contextBridge → 검증된 Electron IPC이다. 임의 HTTP 서버·공개 로컬 포트·임의 Node 호출은 제공하지 않는다. `nodeIntegration=false`, `contextIsolation=true`, `sandbox=true`, CSP, navigation/window-open 거부 및 sender frame 확인을 적용한다. UI는 공급자 응답 객체를 직접 저장하지 않고 도메인 스키마를 사용한다.
 
 응답은 `{ok:true,data}` 또는 `{ok:false,error:{code,message,correlationId}}`이다. Zod 입력 실패는 VALIDATION, 충돌은 CONFLICT, 인증은 NEEDS_AUTH, 권한은 FORBIDDEN, 한도는 RATE_LIMIT, 네트워크는 OFFLINE이다. 결과를 받지 못했다는 이유로 원격 모델 작업을 재시작하지 않는다.

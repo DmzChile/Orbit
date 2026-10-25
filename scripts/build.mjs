@@ -6,7 +6,7 @@ await build({
   format: "cjs",
   target: "node24",
   outfile: "dist/main.cjs",
-  external: ["electron"],
+  external: ["electron", "electron-updater"],
 });
 await build({
   entryPoints: ["src/main/preload.ts"],
