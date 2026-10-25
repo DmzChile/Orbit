@@ -1,8 +1,8 @@
 {
   "name": "orbit-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
-  "description": "Orbit \u2014 Windows personal workspace",
+  "description": "Orbit — Windows personal workspace",
   "author": "Orbit contributors",
   "license": "UNLICENSED",
   "type": "module",
@@ -31,7 +31,8 @@
       "dist/**",
       "package.json",
       "resources/**",
-      "docs/SETUP.md"
+      "docs/SETUP.md",
+      "docs/EXTERNAL_CHATGPT.md"
     ],
     "asar": true,
     "win": {
@@ -48,6 +49,7 @@
   },
   "dependencies": {
     "@js-temporal/polyfill": "0.5.1",
+    "fast-xml-parser": "5.11.2",
     "jszip": "3.10.2",
     "react": "19.3.1",
     "react-dom": "19.3.1",

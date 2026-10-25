@@ -215,8 +215,8 @@ export const requestSchema = z.object({
   enabled: z.boolean(),
   consent: z.boolean(),
   notify: z.boolean(),
-  provider: z.literal("github-actions-openai"),
-  requirementVersion: z.literal("1.0"),
+  provider: z.enum(["chatgpt-external", "github-actions-openai"]),
+  requirementVersion: z.enum(["1.0", "1.1"]),
   remoteIssue: z.number().int().positive().optional(),
   remoteUpdatedAt: iso.optional(),
 });
@@ -300,6 +300,10 @@ export const settingsSchema = z.object({
   selectedBoard: id,
   githubLogin: z.string().optional(),
   allowedRepos: z.array(repoName),
+  resultAuthors: z
+    .array(z.string().regex(/^[A-Za-z0-9][A-Za-z0-9-]*(?:\[bot\])?$/))
+    .max(20)
+    .default([]),
   pollSeconds: z.number().int().min(30).max(900),
   fontScale: z.number().min(0.85).max(2),
   window: z
@@ -314,7 +318,7 @@ export const settingsSchema = z.object({
 });
 export type Settings = z.infer<typeof settingsSchema>;
 export const stateSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   version: z.number().int().min(0),
   workspaceId: id,
   createdAt: iso,
@@ -357,7 +361,7 @@ export type AppState = z.infer<typeof stateSchema>;
 export function initialState(): AppState {
   const now = new Date().toISOString();
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     version: 0,
     workspaceId: crypto.randomUUID(),
     createdAt: now,
@@ -372,6 +376,7 @@ export function initialState(): AppState {
       weekStart: "sunday",
       selectedBoard: "personal",
       allowedRepos: [],
+      resultAuthors: [],
       pollSeconds: 60,
       fontScale: 1,
     },

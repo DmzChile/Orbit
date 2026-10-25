@@ -374,6 +374,55 @@ nav {
   top: 0;
   pointer-events: none;
 }
+.planet-system {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  animation: float 6s ease-in-out infinite;
+}
+.satellite-track {
+  position: absolute;
+  left: 63px;
+  top: 54px;
+  width: 192px;
+  height: 86px;
+  border: 1px solid #b5e8ed42;
+  border-radius: 50%;
+}
+.satellite-light {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f3ffff;
+  box-shadow:
+    0 0 8px 3px #a3e7edb0,
+    0 0 21px 6px #8ccfd340;
+  offset-path: ellipse(96px 43px at 159px 97px);
+  offset-rotate: 0deg;
+  offset-distance: 12%;
+  z-index: 3;
+  animation:
+    satellite-revolve 8s linear infinite,
+    satellite-depth 8s steps(1, end) infinite;
+}
+@keyframes satellite-revolve {
+  from {
+    offset-distance: 12%;
+  }
+  to {
+    offset-distance: 112%;
+  }
+}
+@keyframes satellite-depth {
+  0%,
+  88% {
+    z-index: 3;
+  }
+  38% {
+    z-index: 1;
+  }
+}
 .planet {
   position: absolute;
   left: 100px;
@@ -383,7 +432,7 @@ nav {
   border-radius: 50%;
   background: radial-gradient(circle at 28% 20%, #bddfd8, #5c99a2 58%, #255467);
   box-shadow: inset -14px -6px 18px #0e34464a;
-  animation: float 6s ease-in-out infinite;
+  z-index: 2;
 }
 .orbit {
   position: absolute;

@@ -84,7 +84,7 @@ export function NewsPage({
     <>
       <Head
         title="발견하고, 읽고, 연결하세요."
-        sub="검색은 수집한 기사 캐시에서 수행합니다. 주제는 제목의 키워드로 분류합니다."
+        sub="한국 뉴스 · 동아일보 공식 RSS. 검색은 수집한 기사 캐시에서 수행하며 주제는 제목 키워드로 분류합니다."
         action={
           <Button onClick={() => void fetchNews()} disabled={busy}>
             {busy ? "불러오는 중…" : "새로고침"}
@@ -141,7 +141,7 @@ export function NewsPage({
                 key={a.id}
                 onClick={() => onSelected(a)}
               >
-                <small>{a.topics.join(" · ")}</small>
+                <small>{a.topics.join(" · ") || "한국 뉴스"}</small>
                 <h3>{a.title}</h3>
                 <small>
                   {a.source} · {dateText(a.publishedAt)}
@@ -162,12 +162,16 @@ export function NewsPage({
           <Button onClick={() => void fetchNews(true)} disabled={busy}>
             기사 더 불러오기
           </Button>
-          <small>출처: Hacker News 공식 API · 전문은 수집하지 않습니다.</small>
+          <small>
+            출처: 동아일보 공식 RSS · 개인 비상업적 이용 · 전문·사진 미수집
+          </small>
         </section>
         {article ? (
           <article className="card reader">
             <div className="row between wrap">
-              <Pill tone="green">{article.topics.join(" · ")}</Pill>
+              <Pill tone="green">
+                {article.topics.join(" · ") || "한국 뉴스"}
+              </Pill>
               <div className="row">
                 <Button
                   aria-label="글자 작게"

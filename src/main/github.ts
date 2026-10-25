@@ -249,11 +249,48 @@ export class GitHub {
     repo: string,
     since?: string,
     tracked: number[] = [],
+    resultAuthors: string[] = [],
   ): Promise<{ requests: Request[]; runs: Run[]; cursor: string }> {
     const started = new Date().toISOString();
     const requests: Request[] = [],
       runs: Run[] = [];
     const seen = new Set<number>();
+    const acceptRun = (
+      request: Request,
+      comment: { user?: { login?: string }; body?: string },
+    ) => {
+      const allowed =
+        request.provider === "chatgpt-external"
+          ? resultAuthors
+          : ["github-actions[bot]"];
+      if (
+        !allowed.some(
+          (a) => a.toLowerCase() === comment.user?.login?.toLowerCase(),
+        ) ||
+        !comment.body?.startsWith(RUN_MARKER)
+      )
+        return undefined;
+      const parsed = runSchema.safeParse(tryDecode(comment.body, RUN_MARKER));
+      if (!parsed.success) return undefined;
+      const run = parsed.data;
+      if (
+        run.requestId !== request.id ||
+        run.requestSnapshot.id !== request.id ||
+        run.requestSnapshot.repository !== repo ||
+        run.requestSnapshot.provider !== request.provider ||
+        (run.status === "succeeded" && run.checks.some((c) => !c.passed))
+      )
+        return undefined;
+      if (run.prUrl) {
+        const pr = new URL(run.prUrl);
+        if (
+          pr.origin !== "https://github.com" ||
+          !pr.pathname.startsWith(`/${repo}/pull/`)
+        )
+          return undefined;
+      }
+      return run;
+    };
     for (let page = 1; page <= 20; page++) {
       const issues = await this.api(
         `/repos/${repo}/issues?state=all&sort=updated&direction=asc&per_page=100&page=${page}${since ? `&since=${encodeURIComponent(since)}` : ""}`,
@@ -282,24 +319,8 @@ export class GitHub {
             `/repos/${repo}/issues/${issue.number}/comments?per_page=100&page=${p}`,
           );
           for (const c of comments) {
-            if (
-              c.user?.login !== "github-actions[bot]" ||
-              !c.body?.startsWith(RUN_MARKER)
-            )
-              continue;
-            let record: unknown;
-            try {
-              record = decodeRecord(c.body, RUN_MARKER);
-            } catch {
-              continue;
-            }
-            const r = runSchema.safeParse(record);
-            if (
-              r.success &&
-              r.data.requestId === parsed.data.id &&
-              r.data.requestSnapshot.repository === repo
-            )
-              runs.push({ ...r.data, issueNumber: issue.number });
+            const run = acceptRun(parsed.data, c);
+            if (run) runs.push({ ...run, issueNumber: issue.number });
           }
           if (comments.length < 100) break;
         }
@@ -311,30 +332,20 @@ export class GitHub {
           const r = requestSchema.safeParse(
             tryDecode(issue.body, REQUEST_MARKER),
           );
-          if (r.success)
-            requests.push({
-              ...r.data,
-              remoteIssue: number,
-              remoteUpdatedAt: issue.updated_at,
-              enabled: issue.state === "open" && r.data.enabled,
-            });
+          if (!r.success || r.data.repository !== repo) continue;
+          requests.push({
+            ...r.data,
+            remoteIssue: number,
+            remoteUpdatedAt: issue.updated_at,
+            enabled: issue.state === "open" && r.data.enabled,
+          });
           for (let p = 1; p <= 100; p++) {
             const comments = await this.api(
               `/repos/${repo}/issues/${number}/comments?per_page=100&page=${p}`,
             );
             for (const c of comments) {
-              if (
-                c.user?.login !== "github-actions[bot]" ||
-                !c.body?.startsWith(RUN_MARKER)
-              )
-                continue;
-              try {
-                const run = runSchema.parse(decodeRecord(c.body, RUN_MARKER));
-                if (run.requestSnapshot.repository === repo)
-                  runs.push({ ...run, issueNumber: number });
-              } catch {
-                continue;
-              }
+              const run = acceptRun(r.data, c);
+              if (run) runs.push({ ...run, issueNumber: number });
             }
             if (comments.length < 100) break;
           }

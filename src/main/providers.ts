@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { articleSchema, OrbitError, type Article } from "../domain/model";
+import { OrbitError, type Article } from "../domain/model";
 export async function jsonFetch(url: string, init: RequestInit = {}) {
   let response: Response;
   try {
@@ -46,78 +46,6 @@ export async function jsonFetch(url: string, init: RequestInit = {}) {
 }
 export interface NewsProvider {
   fetchPage(page: number): Promise<Article[]>;
-}
-const hnItem = z.object({
-  id: z.number(),
-  title: z.string().optional(),
-  url: z.string().optional(),
-  by: z.string().optional(),
-  time: z.number(),
-  type: z.string(),
-  deleted: z.boolean().optional(),
-  dead: z.boolean().optional(),
-});
-export class HackerNewsProvider implements NewsProvider {
-  async fetchPage(page: number) {
-    const ids = z
-      .array(z.number())
-      .parse(
-        await jsonFetch(
-          "https://hacker-news.firebaseio.com/v0/topstories.json",
-        ),
-      );
-    const selected = ids.slice(page * 24, (page + 1) * 24);
-    const rows: Article[] = [];
-    for (let i = 0; i < selected.length; i += 6) {
-      const batch = await Promise.allSettled(
-        selected.slice(i, i + 6).map(async (n) => {
-          const item = hnItem.parse(
-            await jsonFetch(
-              `https://hacker-news.firebaseio.com/v0/item/${n}.json`,
-            ),
-          );
-          if (item.deleted || item.dead || !item.title) return null;
-          const topics: Article["topics"] = ["테크"];
-          if (/space|orbit|nasa|moon|astronom|rocket|mars/i.test(item.title))
-            topics.push("우주");
-          if (/learn|teach|course|study|math|book|education/i.test(item.title))
-            topics.push("학습");
-          if (
-            /financ|market|stock|bank|econom|invest|money|trading/i.test(
-              item.title,
-            )
-          )
-            topics.push("금융");
-          const url = item.url?.startsWith("https://")
-            ? item.url
-            : `https://news.ycombinator.com/item?id=${item.id}`;
-          return articleSchema.parse({
-            id: `hn:${item.id}`,
-            title: item.title,
-            url,
-            source: "Hacker News",
-            sourceUrl: `https://news.ycombinator.com/item?id=${item.id}`,
-            publishedAt: new Date(item.time * 1000).toISOString(),
-            fetchedAt: new Date().toISOString(),
-            topics,
-            summary:
-              "Hacker News에서 수집한 기사 링크입니다. 본문과 읽기 시간은 제공되지 않습니다. 원문에서 내용을 확인하세요.",
-            summaryKind: "metadata",
-            readingMinutes: 0,
-            image: "orbit",
-          });
-        }),
-      );
-      for (const v of batch)
-        if (v.status === "fulfilled" && v.value) rows.push(v.value);
-    }
-    if (selected.length && rows.length === 0)
-      throw new OrbitError(
-        "PROVIDER_ERROR",
-        "기사를 불러오지 못했습니다. 캐시를 유지합니다.",
-      );
-    return rows;
-  }
 }
 export async function fetchQuote(symbol: string, key: string) {
   if (!key)

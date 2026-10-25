@@ -12,6 +12,9 @@ export function SettingsPage({
 }) {
   const [settings, setSettings] = useState(state.settings),
     [githubToken, setGithubToken] = useState(""),
+    [resultAuthors, setResultAuthors] = useState(
+      state.settings.resultAuthors.join(", "),
+    ),
     [alphaKey, setAlphaKey] = useState(""),
     [connection, setConnection] = useState<{
       github: boolean;
@@ -35,6 +38,7 @@ export function SettingsPage({
   }, [state.settings.githubLogin, busy]);
   useEffect(() => {
     setSettings(state.settings);
+    setResultAuthors(state.settings.resultAuthors.join(", "));
   }, [JSON.stringify(state.settings)]);
   async function task(fn: () => Promise<unknown>, message?: string) {
     setBusy(true);
@@ -99,9 +103,10 @@ export function SettingsPage({
             않습니다.
           </p>
           <small>
-            최소 권한: Metadata 읽기, Contents 읽기, Issues 읽기/쓰기, Actions
-            읽기/쓰기, Pull requests 읽기. 실행기의 PR 쓰기 권한은 별도
-            GITHUB_TOKEN을 사용합니다.
+            최소 권한: Metadata·Contents 읽기, Issues 읽기/쓰기, Pull requests
+            읽기. GitHub Actions 산출물 다운로드를 사용할 때만 Actions 읽기를
+            추가하세요. 외부 ChatGPT 작업의 저장소 권한은 해당 연결에서 별도로
+            설정합니다.
           </small>
           <label className="field">
             GitHub 토큰
@@ -185,27 +190,56 @@ export function SettingsPage({
           )}
         </section>
         <section className="card form">
-          <h2>AI 및 원격 실행기</h2>
-          <Pill tone="purple">ChatGPT 자체 예약 직접 연동 · 미지원</Pill>
+          <h2>ChatGPT 예약 연결</h2>
+          <Pill tone="purple">외부 예약 · 사용자 설정</Pill>
           <p>
-            GitHub Actions + 공식 OpenAI API를 사용합니다. Orbit 앱에는 AI 운영
-            키를 저장하지 않습니다. 저장소의 OPENAI_API_KEY secret과 실행 정책이
-            필요합니다.
+            GPT API 키 없이 사용합니다. GitHub에 요청을 등록한 뒤 예약
+            프롬프트를 복사해 사용자가 만든 ChatGPT 예약 작업에 연결하세요.
           </p>
           <ol>
-            <li>대상 저장소에 orbit-worker.yml 워크플로를 추가하세요.</li>
+            <li>GitHub를 연결하고 대상 저장소를 허용하세요.</li>
+            <li>자동화에서 요청을 등록하고 예약 프롬프트를 복사하세요.</li>
             <li>
-              GitHub Actions 변수 ORBIT_RUNTIME_REF에 검토한 Orbit 커밋 SHA를
+              GitHub 접근이 가능한 ChatGPT 작업에 붙여 넣고 시간과 권한을
               설정하세요.
             </li>
-            <li>OPENAI_API_KEY secret과 .orbit/policy.json을 설정하세요.</li>
-            <li>요청 작성에서 실행 경로·비용에 동의한 후 등록하세요.</li>
+            <li>수동 1회 실행으로 결과 댓글과 앱 수신을 확인하세요.</li>
           </ol>
           <p className="muted">
-            스케줄은 GitHub에서 약 5분마다 확인합니다. 앱 종료·PC 전원 꺼짐과
-            별도로 실행됩니다. API 사용료와 Actions 사용량이 발생할 수 있으며
-            조직 정책과 플랜에 따라 제한됩니다.
+            Orbit의 예약 정의와 ChatGPT의 실제 예약은 별개입니다. 요청
+            변경·일시정지 시 외부 작업도 최신 Issue를 확인해야 합니다. 실행
+            환경과 한도는 ChatGPT 설정을 따릅니다.
           </p>
+          <label className="field">
+            추가 결과 게시 계정 (쉼표로 구분)
+            <input
+              value={resultAuthors}
+              onChange={(e) => setResultAuthors(e.target.value)}
+              placeholder="예: my-automation[bot]"
+            />
+          </label>
+          <small>
+            연결한 GitHub 계정은 자동 허용됩니다. 다른 계정으로 결과를 게시할
+            때만 정확한 로그인 이름을 추가하세요.
+          </small>
+          <Button
+            disabled={busy}
+            onClick={() =>
+              void task(
+                () =>
+                  save({
+                    ...settings,
+                    resultAuthors: resultAuthors
+                      .split(",")
+                      .map((v) => v.trim())
+                      .filter(Boolean),
+                  }),
+                "결과 게시 계정을 저장했어요.",
+              )
+            }
+          >
+            결과 게시 계정 저장
+          </Button>
           <Button
             onClick={() =>
               void api<string>("help.setup")
@@ -213,23 +247,20 @@ export function SettingsPage({
                 .catch((e) => setError(errorText(e)))
             }
           >
-            실행기 설치 안내
+            연결 안내
           </Button>
           {help && (
             <details open>
-              <summary>실행기 설치 안내</summary>
+              <summary>연결 안내</summary>
               <pre className="setup-help">{help}</pre>
             </details>
           )}
           <Button
             onClick={() =>
-              void api(
-                "open",
-                "https://developers.openai.com/api/docs/guides/function-calling",
-              )
+              void api("open", "https://learn.chatgpt.com/docs/automations")
             }
           >
-            공식 OpenAI API 문서 ↗
+            ChatGPT 예약 공식 안내 ↗
           </Button>
           <Button
             disabled={busy}

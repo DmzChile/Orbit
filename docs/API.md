@@ -17,7 +17,8 @@
 | repos / branches / activity | 페이지 최대 100; 앱 허용 저장소 검사와 GitHub 권한 검증 |
 | attachment.pick | 사용자 파일 대화상자에서 UTF-8 텍스트 선택 → 제한된 내용/실제 크기/SHA, 로컬 경로 반환 없음 |
 | request.save | 로컬 초안; 저장소 미선택 허용 |
-| request.publish | 유효한 저장소·실행 동의·workflow 확인 후 추적 Issue 생성/수정 |
+| request.publish | 유효한 저장소·공유 동의 후 추적 Issue 생성/수정; 외부 ChatGPT에는 workflow 불필요 |
+| request.copyPrompt | 게시된 Issue의 외부 예약 프롬프트를 OS clipboard에 복사; ChatGPT 예약 생성 아님 |
 | request.remove | 원격 Issue 닫기와 로컬 정의 제거; 기존 실행 이력 보존 |
 | run.enqueue / run.retryDelivery | 로컬 run + 고정 스냅샷 + 같은 ID 영속 큐; 읽기 후 쓰기로 재전송 중복 방지 |
 | run.cancel / run.read | 취소 댓글/Actions 취소, 별도 읽음 시각 |
@@ -32,7 +33,7 @@ renderer 이벤트는 데이터 변경, 결과 알림 클릭 ID, 다운로드 �
 
 파일 참조는 최대 2개, UTF-8 파일당 24KB/6,000자이며 요청과 함께 고정 스냅샷에 포함한다. 전체 원격 레코드가 GitHub 본문 한도를 넘으면 게시를 거부한다.
 
-Request/Run/Artifact는 `src/domain/model.ts`가 실행 가능한 계약이다. UTC ISO 시각, IANA timezone, 반복 규칙, 스키마 버전, 요청 version, SHA, run ID를 분리한다. Issue와 댓글은 버전 마커와 JSON fenced block으로 직렬화한다. 실행 결과는 해당 저장소의 `github-actions[bot]` 작성 댓글만 수용한다. 실행기에서는 OWNER/MEMBER/COLLABORATOR가 만든 허용 label의 요청과 큐만 실행한다.
+Request/Run/Artifact는 `src/domain/model.ts`가 실행 가능한 계약이다. UTC ISO 시각, IANA timezone, 반복 규칙, 스키마 버전, 요청 version, SHA, run ID를 분리한다. Issue와 댓글은 버전 마커와 JSON fenced block으로 직렬화한다. 기본 `chatgpt-external` 결과는 연결 GitHub 로그인 및 settings.resultAuthors의 명시적 허용 게시자 댓글만 수용한다. 이전 `github-actions-openai`만 `github-actions[bot]`을 수용한다. 요청 ID/사본 ID/저장소/공급자와 실제 PR 저장소를 검사하며 succeeded+실패 checks는 거부한다. [외부 예약 계약](EXTERNAL_CHATGPT.md)을 참조한다. 실행기에서는 OWNER/MEMBER/COLLABORATOR가 만든 허용 label의 요청과 큐만 실행한다.
 
 예약 회차 idempotency key는 request ID + 예정 UTC 시각, 수동은 새 UUID이다. 댓글 100개씩 최대 100페이지, 발견 Issue 100개씩 최대 20페이지를 조회한다. 한도를 넘으면 커서를 진전시키지 않고 오류를 반환한다. 알려진 Issue는 커서와 무관하게 확인한다. 같은 ID의 오래된 결과가 최신 상태나 로컬 읽음을 덮어쓰지 않는다.
 

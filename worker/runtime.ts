@@ -742,7 +742,12 @@ export async function scan() {
     } catch {
       continue;
     }
-    if (req.repository !== repo || !req.consent) continue;
+    if (
+      req.repository !== repo ||
+      !req.consent ||
+      req.provider !== "github-actions-openai"
+    )
+      continue;
     const rows = await comments(gh, repo, issue.number),
       records: Run[] = [],
       queued: Run[] = [];

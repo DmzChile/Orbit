@@ -3,6 +3,7 @@ import { mkdtemp, readFile, writeFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { Store } from "../src/main/store";
+import { request } from "./fixtures";
 describe("DATA-01/APP-02/REL-01 · durable storage", () => {
   it("serializes concurrent transactions and persists restart state", async () => {
     const dir = await mkdtemp(join(tmpdir(), "orbit-store-")),
@@ -88,4 +89,34 @@ describe("DATA-01/APP-02/REL-01 · durable storage", () => {
     });
     expect(await readFile(join(dir, "state.json"), "utf8")).toBe(future);
   });
+});
+
+it("DATA-01 · preserves prior API requests while adding the default external-result allowlist", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "orbit-compatible-")),
+    store = new Store(dir);
+  await store.init();
+  await store.close();
+  const previous = JSON.parse(await readFile(join(dir, "state.json"), "utf8"));
+  delete previous.settings.resultAuthors;
+  previous.schemaVersion = 1;
+  previous.savedArticles = ["hn:saved"];
+  previous.requests = [request()];
+  await writeFile(join(dir, "state.json"), JSON.stringify(previous));
+  const reopened = new Store(dir);
+  const restored = await reopened.init();
+  expect(restored.settings.resultAuthors).toEqual([]);
+  expect(restored.savedArticles).toEqual(["hn:saved"]);
+  expect(restored.requests[0].provider).toBe("github-actions-openai");
+  expect(restored.schemaVersion).toBe(2);
+  expect(
+    JSON.parse(await readFile(join(dir, "state.json.v1.backup"), "utf8")),
+  ).toMatchObject({ schemaVersion: 1, savedArticles: ["hn:saved"] });
+  expect(
+    JSON.parse(await readFile(join(dir, "state.json"), "utf8")),
+  ).toMatchObject({ schemaVersion: 2 });
+  await reopened.reset();
+  await expect(
+    readFile(join(dir, "state.json.v1.backup")),
+  ).rejects.toMatchObject({ code: "ENOENT" });
+  await reopened.close();
 });

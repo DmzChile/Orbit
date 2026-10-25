@@ -36,7 +36,11 @@ export function Sculpture() {
       <i className="orbit" />
       <i className="orbit" />
       <i className="orbit" />
-      <div className="planet" />
+      <div className="planet-system">
+        <div className="satellite-track" />
+        <div className="planet" />
+        <i className="satellite-light" />
+      </div>
     </div>
   );
 }

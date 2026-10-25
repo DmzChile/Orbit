@@ -7,6 +7,7 @@ import {
   unlink,
 } from "node:fs/promises";
 import { join } from "node:path";
+import { constants } from "node:fs";
 import {
   initialState,
   OrbitError,
@@ -69,10 +70,11 @@ export class Store {
     }
     if (!this.lock)
       throw new OrbitError("LOCKED", "데이터 잠금을 얻지 못했습니다.");
+    let originalSchema: number | undefined;
     try {
-      this.state = parseStoredState(
-        JSON.parse(await readFile(this.file, "utf8")),
-      );
+      const original = JSON.parse(await readFile(this.file, "utf8"));
+      this.state = parseStoredState(original);
+      originalSchema = original.schemaVersion;
     } catch (e) {
       if (
         e instanceof OrbitError &&
@@ -98,6 +100,24 @@ export class Store {
             "저장 데이터와 백업을 읽을 수 없습니다. 원본을 보존했습니다.",
           );
         }
+      }
+    }
+    if (originalSchema && originalSchema < this.state.schemaVersion) {
+      try {
+        await copyFile(
+          this.file,
+          `${this.file}.v${originalSchema}.backup`,
+          constants.COPYFILE_EXCL,
+        ).catch((error) => {
+          if (error.code !== "EEXIST") throw error;
+        });
+        await atomicWrite(this.file, JSON.stringify(this.state));
+      } catch {
+        await this.close();
+        throw new OrbitError(
+          "STORAGE_ERROR",
+          "데이터 업그레이드를 저장하지 못했습니다. 원본과 버전 백업을 보존했습니다.",
+        );
       }
     }
     return this.snapshot();
@@ -134,7 +154,11 @@ export class Store {
   }
   async reset() {
     await this.update((d) => Object.assign(d, initialState()));
-    for (const name of [`${this.file}.backup`, `${this.file}.corrupt`])
+    for (const name of [
+      `${this.file}.backup`,
+      `${this.file}.corrupt`,
+      `${this.file}.v1.backup`,
+    ])
       await unlink(name).catch((e) => {
         if (e.code !== "ENOENT") throw e;
       });

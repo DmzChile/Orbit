@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   execute:
-    if: vars.ORBIT_RUNTIME_REF != ''
+    if: vars.ORBIT_API_WORKER_ENABLED == 'true' && vars.ORBIT_RUNTIME_REF != ''
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:

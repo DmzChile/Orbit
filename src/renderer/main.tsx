@@ -547,7 +547,7 @@ function Home({
           <small>
             {last
               ? `${last.status} · ${dateText(last.updatedAt)}`
-              : "GitHub 실행기를 연결한 뒤 첫 요청을 보내보세요."}
+              : "GitHub와 외부 ChatGPT 예약을 연결해 첫 요청을 보내보세요."}
           </small>
         </div>
         <div className="actions">

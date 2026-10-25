@@ -25,10 +25,8 @@ try {
   await expect(
     page.getByRole("heading", { name: "앱 정보 및 진단" }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "실행기 설치 안내", exact: true })
-    .click();
-  await expect(page.locator(".setup-help")).toContainText("OPENAI_API_KEY");
+  await page.getByRole("button", { name: "연결 안내", exact: true }).click();
+  await expect(page.locator(".setup-help")).toContainText("GPT API 키 없이");
   const electronVersion = await app.evaluate(({ app }) => ({
     version: app.getVersion(),
     packaged: app.isPackaged,

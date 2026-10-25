@@ -1,4 +1,4 @@
-import { app, dialog, shell, Notification } from "electron";
+import { app, clipboard, dialog, shell, Notification } from "electron";
 import { readFile, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { createHash } from "node:crypto";
@@ -18,7 +18,9 @@ import {
   type Run,
 } from "../domain/model";
 import { GitHub, encodeRecord } from "./github";
-import { HackerNewsProvider, fetchQuote, fetchIndex } from "./providers";
+import { fetchQuote, fetchIndex } from "./providers";
+import { KoreanNewsProvider } from "./news";
+import { externalTaskPrompt } from "../domain/external";
 import { atomicWrite, Store } from "./store";
 import { Vault } from "./vault";
 import { inQuietHours } from "../domain/notifications";
@@ -30,6 +32,7 @@ export class Service {
   private failures = 0;
   private nextPoll = 0;
   private newsBusy = false;
+  private news = new KoreanNewsProvider();
   public connectionError = "";
   constructor(
     public store: Store,
@@ -62,8 +65,8 @@ export class Service {
           alpha: !!(await this.vault.get("alpha")),
           login: this.store.snapshot().settings.githubLogin,
           error: this.connectionError,
-          chatgpt: "unsupported",
-          executor: "GitHub Actions + OpenAI API",
+          chatgpt: "user-managed",
+          executor: "외부 ChatGPT 예약 · GitHub 결과 수신",
           version: app.getVersion(),
         };
       case "settings.save": {
@@ -193,9 +196,16 @@ export class Service {
         this.newsBusy = true;
         try {
           const page = op === "news.refresh" ? 0 : this.page + 1;
-          const articles = await new HackerNewsProvider().fetchPage(page);
+          const articles = await this.news.fetchPage(page);
           await this.store.update((d) => {
-            const items = new Map(d.articles.map((a) => [a.id, a]));
+            const items = new Map(
+              d.articles
+                .filter(
+                  (a) =>
+                    !a.id.startsWith("hn:") || d.savedArticles.includes(a.id),
+                )
+                .map((a) => [a.id, a]),
+            );
             for (const a of articles) items.set(a.id, a);
             d.articles = [...items.values()]
               .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
@@ -359,6 +369,19 @@ export class Service {
         });
         break;
       }
+      case "request.copyPrompt": {
+        const req = this.store
+          .snapshot()
+          .requests.find((r) => r.id === z.string().parse(data));
+        if (!req?.remoteIssue)
+          throw new OrbitError(
+            "NOT_PUBLISHED",
+            "먼저 GitHub에 요청을 등록하세요.",
+          );
+        repoName.parse(req.repository);
+        clipboard.writeText(externalTaskPrompt(req));
+        return { copied: true };
+      }
       case "request.publish": {
         const input = z.object({ id: z.string() }).parse(data);
         let req = this.store.snapshot().requests.find((r) => r.id === input.id);
@@ -367,10 +390,11 @@ export class Service {
         if (!req.consent)
           throw new OrbitError(
             "CONSENT_REQUIRED",
-            "GitHub Actions 실행과 API 과금 안내에 동의해야 활성화할 수 있습니다.",
+            "GitHub에 요청을 공유하고 외부 ChatGPT 작업에 전달하는 데 동의해야 등록할 수 있습니다.",
           );
         const gh = await this.github(req.repository);
-        await gh.workflow(req.repository);
+        if (req.provider === "github-actions-openai")
+          await gh.workflow(req.repository);
         const issue = await gh.publishRequest(req);
         req = {
           ...req,
@@ -420,7 +444,7 @@ export class Service {
           requestSnapshot: structuredClone(req),
           attempts: 0,
           steps: [{ status: "queued", at }],
-          summary: "실행기 대기열에 요청을 전송합니다.",
+          summary: "GitHub 대기열에 요청을 전송합니다.",
           checks: [],
           artifacts: [],
           changedFiles: [],
@@ -448,7 +472,11 @@ export class Service {
             }),
           },
         );
-        if (run.workflowRunId) await gh.cancel(run);
+        if (
+          run.workflowRunId &&
+          run.requestSnapshot.provider === "github-actions-openai"
+        )
+          await gh.cancel(run);
         await this.store.update((d) => {
           const r = d.runs.find((r) => r.id === run.id)!;
           r.status = "cancel_requested";
@@ -529,7 +557,7 @@ export class Service {
           version: app.getVersion(),
           platform: process.platform,
           architecture: process.arch,
-          storageSchema: 1,
+          storageSchema: state.schemaVersion,
           stateVersion: state.version,
           queueDepth: state.runs.filter((r) => !terminal(r.status)).length,
           completedRuns: completed.length,
@@ -565,11 +593,14 @@ export class Service {
         const r = d.runs.find((v) => v.id === run.id)!;
         r.deliveredAt = now();
         r.summary =
-          "GitHub의 영속 대기열에 전달했습니다. 실행기 시작을 기다립니다.";
+          run.requestSnapshot.provider === "chatgpt-external"
+            ? "GitHub에 전달했습니다. 외부 ChatGPT 예약 작업의 확인을 기다립니다."
+            : "GitHub의 영속 대기열에 전달했습니다. 실행기 시작을 기다립니다.";
         r.errorCode = undefined;
       });
       try {
-        await gh.dispatch(run.requestSnapshot);
+        if (run.requestSnapshot.provider === "github-actions-openai")
+          await gh.dispatch(run.requestSnapshot);
       } catch {
         await this.store.update((d) => {
           const r = d.runs.find((v) => v.id === run.id)!;
@@ -611,6 +642,12 @@ export class Service {
           snapshot.requests
             .filter((r) => r.repository === repo && r.remoteIssue)
             .map((r) => r.remoteIssue!),
+          [
+            ...snapshot.settings.resultAuthors,
+            ...(snapshot.settings.githubLogin
+              ? [snapshot.settings.githubLogin]
+              : []),
+          ],
         );
         await this.store.update((d) => {
           for (const remote of result.requests) {

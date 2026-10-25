@@ -51,7 +51,7 @@ test("E2E-01 · actual public news, saved article, restart and request reference
     );
     expect(data.articles.length).toBeGreaterThan(0);
     expect(data.savedArticles).toHaveLength(1);
-    expect(data.articles[0].source).toBe("Hacker News");
+    expect(data.articles[0].source).toBe("동아일보");
     expect(data.settings.readerScale).toBeGreaterThan(1);
     app = await electron.launch({
       executablePath: join(

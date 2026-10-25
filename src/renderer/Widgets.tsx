@@ -872,7 +872,7 @@ function Space({ state }: { state: AppState }) {
           뉴스에서 실제 기사를 수집하면 우주 관련 기사가 표시됩니다.
         </Empty>
       )}
-      <small>Hacker News · 수집 캐시</small>
+      <small>한국 뉴스 공식 RSS · 수집 캐시</small>
     </>
   );
 }

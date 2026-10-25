@@ -51,7 +51,7 @@ export function Automations({
     <>
       <Head
         title="생각은 지금. 작업은 제시간에."
-        sub="요청은 GitHub에 보관하고, 실행은 GitHub Actions + 공식 OpenAI API가 담당합니다."
+        sub="요청은 GitHub에 보관하고, 사용자가 설정한 외부 ChatGPT 예약 작업이 실행합니다."
         action={
           <Button
             onClick={() => {
@@ -77,7 +77,7 @@ export function Automations({
             <div className="flow-list">
               {[
                 ["요청과 규칙 보관", "Issue · 요청 스냅샷 · 실행 ID"],
-                ["정해진 시간에 실행", "GitHub Actions의 격리 작업 공간"],
+                ["외부 ChatGPT 예약", "ChatGPT에서 직접 만든 작업이 요청 확인"],
                 ["검증 후 변경 제안", "실제 빌드·테스트와 Pull Request"],
                 ["결과함으로 자동 수신", "인증된 조회 · 체크섬 검증 다운로드"],
               ].map(([t, s], i) => (
@@ -110,12 +110,14 @@ export function Automations({
                     <small>
                       {r.remoteIssue
                         ? r.enabled
-                          ? "실행기 등록됨"
+                          ? "GitHub 등록됨"
                           : "일시정지"
                         : "로컬 초안"}{" "}
                       · {r.rule.timezone}
                       <br />
-                      {at ? `다음 ${dateText(at)}` : "수동 / 예약 종료"}
+                      {at
+                        ? `예정 ${dateText(at)} · 외부 예약 설정 필요`
+                        : "수동 / 예약 종료"}
                       {last && (
                         <>
                           <br />
@@ -170,16 +172,16 @@ export function Automations({
             )}
           </section>
           <div className="card info">
-            <h3>실행 환경과 비용</h3>
+            <h3>외부 ChatGPT 예약</h3>
             <p>
-              ChatGPT 자체 예약 직접 연동은 미지원입니다. GitHub Actions
-              스케줄은 약 5분 단위이며 GitHub 사정에 따라 지연될 수 있습니다.
-              PC가 꺼져 있어도 설치된 원격 실행기가 동작합니다.
+              ChatGPT 예약은 사용자가 ChatGPT에서 직접 작성합니다. Orbit은
+              GitHub에 요청·예약 정의를 전달하고 결과를 수신합니다. 등록 후 예약
+              프롬프트를 복사해 외부 작업에 붙여 넣으세요.
             </p>
             <p>
-              GitHub Actions 사용량 및 OpenAI API 요금이 발생할 수 있습니다.
-              ChatGPT 구독과 API 과금은 별도입니다. 실행기 설치·저장소 secret
-              설정이 필요합니다.
+              GPT API 키가 필요하지 않습니다. 실행 가능 도구·이용 한도와 실행
+              환경은 사용자의 ChatGPT 설정을 따릅니다. 예약 저장이나 지금
+              실행만으로 ChatGPT 예약이 생성되지는 않습니다.
             </p>
           </div>
         </div>
@@ -228,7 +230,9 @@ function RequestForm({
       initial?.formats ?? ["text", "pdf"],
     ),
     [enabled, setEnabled] = useState(initial?.enabled ?? true),
-    [consent, setConsent] = useState(initial?.consent ?? false),
+    [consent, setConsent] = useState(
+      initial?.provider === "chatgpt-external" ? initial.consent : false,
+    ),
     [notify, setNotify] = useState(initial?.notify ?? true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -272,8 +276,8 @@ function RequestForm({
       enabled,
       consent,
       notify,
-      provider: "github-actions-openai",
-      requirementVersion: "1.0",
+      provider: "chatgpt-external",
+      requirementVersion: "1.1",
       outputPolicy: policy,
       formats,
       remoteIssue: current?.remoteIssue,
@@ -288,7 +292,7 @@ function RequestForm({
       if (publish) await api("request.publish", { id });
       feedback(
         publish
-          ? "실행기에 등록했어요. 수동 실행은 지금 실행을 누르세요."
+          ? "GitHub에 등록했어요. 예약 프롬프트를 외부 ChatGPT 작업에 연결하세요."
           : "초안을 로컬에 저장했어요.",
       );
     } catch (e) {
@@ -311,7 +315,7 @@ function RequestForm({
           <Icon name="spark" />
           <h2>{initial ? "요청 편집" : "새로운 작업 요청"}</h2>
         </div>
-        <Pill>{saved?.remoteIssue ? "실행기 등록됨" : "초안"}</Pill>
+        <Pill>{saved?.remoteIssue ? "GitHub 등록됨" : "초안"}</Pill>
       </div>
       <label className="field">
         요청 제목
@@ -547,12 +551,12 @@ function RequestForm({
         완료 알림 받기
       </label>
       <div className="info">
-        <h3>GitHub Actions + OpenAI API</h3>
+        <h3>ChatGPT 예약은 직접 연결하세요</h3>
         <p>
-          저장소 실행기와 OPENAI_API_KEY secret이 필요합니다. 모델·검증
-          명령·토큰 예산·시간 제한은 저장소의 .orbit/policy.json에서 관리합니다.
-          요청과 결과는 선택한 저장소의 Issue/PR 공개 범위에 따라 공유됩니다.
-          API 예산은 사후 한도이며 운영 계정에서도 지출 제한을 설정하세요.
+          GPT API 키 없이 사용합니다. 요청 등록 후 예약 프롬프트를 복사해 GitHub
+          접근이 가능한 ChatGPT 작업에 붙여 넣고 예약을 설정하세요. 지금 실행은
+          GitHub 대기열로 전달하며 외부 작업의 다음 확인을 기다립니다. 요청과
+          첨부·결과는 선택한 저장소의 공개 범위에 따라 공유됩니다.
         </p>
       </div>
       <label className="checkbox">
@@ -561,7 +565,8 @@ function RequestForm({
           checked={consent}
           onChange={(e) => setConsent(e.target.checked)}
         />
-        이 원격 실행 경로와 GitHub Actions·OpenAI API 비용에 동의합니다.
+        GitHub에 요청·첨부를 공유하고 외부 ChatGPT 작업에 전달하는 데
+        동의합니다.
       </label>
       {error && (
         <p className="error" role="alert">
@@ -569,6 +574,22 @@ function RequestForm({
         </p>
       )}
       <div className="form-actions wrap">
+        {saved?.remoteIssue && (
+          <Button
+            disabled={busy}
+            onClick={() =>
+              void api("request.copyPrompt", id)
+                .then(() =>
+                  feedback(
+                    "예약 프롬프트를 복사했어요. ChatGPT에 붙여 넣으세요.",
+                  ),
+                )
+                .catch((e) => setError(errorText(e)))
+            }
+          >
+            예약 프롬프트 복사
+          </Button>
+        )}
         <Button disabled={busy} onClick={() => void save()}>
           초안 저장
         </Button>
@@ -595,7 +616,7 @@ function RequestForm({
             ? "저장 중…"
             : saved?.remoteIssue
               ? "예약 변경 반영"
-              : "실행기에 등록"}
+              : "GitHub에 등록"}
         </button>
       </div>
     </form>

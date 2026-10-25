@@ -1,11 +1,13 @@
 import { OrbitError, stateSchema, type AppState } from "./model";
-export const CURRENT_SCHEMA_VERSION = 1;
-// Add explicit, tested migrations here when a released schema changes. Never
-// interpret a future schema as corruption or overwrite it with an older backup.
+export const CURRENT_SCHEMA_VERSION = 2;
+// External-provider records are not readable by 0.1.0. Mark them as a future
+// schema so older apps preserve the data instead of treating it as corruption.
 const migrations: Record<
   number,
   (record: Record<string, unknown>) => Record<string, unknown>
-> = {};
+> = {
+  1: (record) => ({ ...record, schemaVersion: 2 }),
+};
 export function parseStoredState(value: unknown): AppState {
   if (!value || typeof value !== "object")
     throw new OrbitError("CORRUPT_DATA", "저장 레코드가 올바르지 않습니다.");

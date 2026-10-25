@@ -135,7 +135,7 @@ test("SEC-01/02/03 · renderer boundaries and validation errors", async () => {
   ).toBeVisible();
   await page.getByRole("button", { name: "자동화", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "실행기에 등록", exact: true }),
+    page.getByRole("button", { name: "GitHub에 등록", exact: true }),
   ).toBeDisabled();
   await app.close();
 });
@@ -202,5 +202,31 @@ test("CAL-02/03/07 · weekly occurrence edit and confirmed delete keep series ex
     expect(after.data.events).toHaveLength(1);
     expect(after.data.events[0].exceptions).toContain(today);
   }
+  await app.close();
+});
+
+test("UX-05/06 · actual orbital light motion respects app and OS reduced motion", async () => {
+  const app = await launch(await mkdtemp(join(tmpdir(), "orbit-motion-"))),
+    page = await app.firstWindow();
+  const light = page.locator(".story .satellite-light");
+  await expect(light).toHaveCount(1);
+  const start = await light.evaluate(
+    (el) => getComputedStyle(el).offsetDistance,
+  );
+  await expect
+    .poll(() => light.evaluate((el) => getComputedStyle(el).offsetDistance))
+    .not.toBe(start);
+  await page.screenshot({ path: "test-results/windows-orbit-motion.png" });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(light).toHaveCSS("animation-name", "none");
+  await expect(page.locator(".story .planet-system")).toHaveCSS(
+    "animation-name",
+    "none",
+  );
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page
+    .getByRole("checkbox", { name: "모션 줄이기", exact: true })
+    .check();
+  await expect(light).toHaveCSS("animation-name", "none");
   await app.close();
 });

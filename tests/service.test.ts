@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import JSZip from "jszip";
 vi.mock("electron", () => ({
   app: { getVersion: () => "0.1.0" },
+  clipboard: { writeText: vi.fn() },
   dialog: { showSaveDialog: vi.fn(), showOpenDialog: vi.fn() },
   shell: { openExternal: vi.fn() },
   Notification: class {
@@ -14,7 +15,7 @@ vi.mock("electron", () => ({
     }
   },
 }));
-import { dialog } from "electron";
+import { clipboard, dialog } from "electron";
 import { Service } from "../src/main/service";
 import { Store } from "../src/main/store";
 import type { Vault } from "../src/main/vault";
@@ -165,6 +166,55 @@ describe("RES-03/04 · actual files with mock authenticated archive transport", 
       completedRuns: 0,
       successRate: null,
       averageLatencyMilliseconds: null,
+    });
+    await store.close();
+  });
+});
+
+describe("AUTO-04/RES-01 · external ChatGPT transport, isolated mock GitHub", () => {
+  it("publishes and queues without a workflow or API key, and copies the handoff prompt", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "orbit-external-")),
+      store = new Store(dir);
+    await store.init();
+    const req = request({
+      provider: "chatgpt-external",
+      requirementVersion: "1.1",
+    });
+    const gh = {
+      workflow: vi.fn(),
+      dispatch: vi.fn(),
+      publishRequest: vi
+        .fn()
+        .mockResolvedValue({
+          number: 12,
+          updated_at: new Date().toISOString(),
+        }),
+      enqueue: vi.fn().mockResolvedValue(undefined),
+    };
+    const service = new Service(
+      store,
+      {} as Vault,
+      () => {},
+      () => {},
+    );
+    vi.spyOn(service, "github").mockResolvedValue(gh as unknown as GitHub);
+    await service.call("request.save", req);
+    await service.call("request.publish", { id: req.id });
+    await service.call("request.copyPrompt", req.id);
+    expect(clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining("orbit-run:v1"),
+    );
+    expect(clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining("https://github.com/example/allowed/issues/12"),
+    );
+    await service.call("run.enqueue", req.id);
+    expect(gh.workflow).not.toHaveBeenCalled();
+    expect(gh.dispatch).not.toHaveBeenCalled();
+    expect(gh.enqueue).toHaveBeenCalledTimes(1);
+    expect(store.snapshot().runs[0]).toMatchObject({
+      status: "queued",
+      deliveredAt: expect.any(String),
+      requestSnapshot: { provider: "chatgpt-external" },
     });
     await store.close();
   });
