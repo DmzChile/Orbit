@@ -28,7 +28,7 @@ npm run package
 npm run test:packaged
 ```
 
-`npm run package`는 `release/Orbit Setup 0.1.3.exe`와 `release/win-unpacked/Orbit.exe`를 생성합니다. 현재 빌드는 서명되지 않았으며 자동 업데이트는 비활성입니다. 기본 설치는 사용자별 설치이며 사용자 데이터는 제거 후에도 유지됩니다. 설치/제거·업데이트/rollback의 실제 검증 여부는 상태 문서를 확인하세요.
+`npm run package`는 `release/Orbit-Setup-0.1.5.exe`, 업데이트용 blockmap·latest.yml과 `release/win-unpacked/Orbit.exe`를 생성합니다. 현재 빌드는 서명되지 않았습니다. 설치된 0.1.4 이상 앱은 공개 릴리스의 새 버전을 확인해 상단에 알리고, 다운로드와 재시작·설치는 사용자가 선택합니다. 기본 설치는 사용자별 설치이며 사용자 데이터는 제거 후에도 유지됩니다. [0.1.5 변경 내용](docs/releases/v0.1.5.md)과 [배포·업데이트 안내](docs/SETUP.md)를 확인하세요.
 
 개발/검증용 데이터 폴더를 분리하려면 `ORBIT_DATA_DIR` 환경 변수로 절대 경로를 지정할 수 있습니다. 비밀키를 환경 파일에 넣거나 저장소에 커밋하지 마세요. 원격 실행기 설정과 연결 권한은 [설치 안내](docs/SETUP.md)에 있습니다.
 

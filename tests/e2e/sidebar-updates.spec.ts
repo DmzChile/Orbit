@@ -79,11 +79,12 @@ test("UX-02/08/SHIP-01 · banner window fits scrollable pages, update notice and
       BrowserWindow.getAllWindows()[0].webContents.send("orbit:update", {
         currentVersion: "0.1.4",
         status: "available",
-        version: "0.2.0",
-        message: "Orbit 0.2.0 업데이트가 있어요.",
+        version: "0.1.5",
+        message: "Orbit 0.1.5 업데이트가 있어요.",
       }),
     );
     const banner = page.locator(".update-notice");
+    await expect(banner).toContainText("Orbit 0.1.5 업데이트가 있어요.");
     await expect(
       banner.getByRole("button", { name: "업데이트 다운로드", exact: true }),
     ).toBeVisible();
@@ -91,7 +92,7 @@ test("UX-02/08/SHIP-01 · banner window fits scrollable pages, update notice and
       BrowserWindow.getAllWindows()[0].webContents.send("orbit:update", {
         currentVersion: "0.1.4",
         status: "downloading",
-        version: "0.2.0",
+        version: "0.1.5",
         percent: 47,
         message: "업데이트를 다운로드하고 있어요.",
       }),
@@ -104,7 +105,7 @@ test("UX-02/08/SHIP-01 · banner window fits scrollable pages, update notice and
       BrowserWindow.getAllWindows()[0].webContents.send("orbit:update", {
         currentVersion: "0.1.4",
         status: "downloaded",
-        version: "0.2.0",
+        version: "0.1.5",
         percent: 100,
         message: "업데이트를 준비했어요.",
       }),
@@ -113,7 +114,7 @@ test("UX-02/08/SHIP-01 · banner window fits scrollable pages, update notice and
       banner.getByRole("button", { name: "재시작 및 설치", exact: true }),
     ).toBeVisible();
     await page.screenshot({
-      path: "work-evidence/banner-workspace-update.png",
+      path: "test-results/banner-workspace-update.png",
     });
   } finally {
     await app.close();
