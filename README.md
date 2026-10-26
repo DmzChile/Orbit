@@ -36,7 +36,7 @@ npm run test:packaged
 
 | 경로 | 역할 |
 |---|---|
-| `src/renderer` | 기존 토큰·카드 계층을 유지한 React 화면 |
+| `src/renderer` | 배너 허브와 확장 창으로 구성한 React 화면. 뉴스의 원래 행성·공전 궤도는 유지 |
 | `src/domain` | 스키마, UTC/IANA 시간대, 반복, 상태 전이, 마이그레이션 |
 | `src/main` | Electron 보안 경계, DPAPI, 원자적 저장, 공급자, 결과 수신 |
 | `worker` | 이전 API worker 호환 코드 (기본 비활성) |

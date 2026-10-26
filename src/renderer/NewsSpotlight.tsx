@@ -5,12 +5,16 @@ import { Button, Pill, dateText } from "./main";
 import { Sculpture } from "./icons";
 
 export function NewsSpotlight({
+  banner = false,
+  active = true,
   articles,
   fetchedAt,
   reduceMotion,
   openArticle,
   openNews,
 }: {
+  banner?: boolean;
+  active?: boolean;
   articles: Article[];
   fetchedAt?: string;
   reduceMotion: boolean;
@@ -50,6 +54,7 @@ export function NewsSpotlight({
     article = current?.article;
   const reduced = reduceMotion || systemReduced;
   const running =
+    active &&
     slides.length > 1 &&
     !paused &&
     !hovered &&
@@ -80,7 +85,7 @@ export function NewsSpotlight({
   return (
     <section
       ref={region}
-      className="card news-card"
+      className={`card news-card${banner ? " news-banner" : ""}`}
       role="region"
       aria-label="분야별 뉴스"
       aria-roledescription="캐러셀"
@@ -93,7 +98,18 @@ export function NewsSpotlight({
       }}
     >
       <div className="row between wrap">
-        <h2>새로운 시선, 오늘의 이야기</h2>
+        {banner ? (
+          <button
+            className="news-banner-title"
+            aria-label="뉴스"
+            onClick={openNews}
+          >
+            <span className="banner-eyebrow">DISCOVER</span>
+            <span className="banner-title">뉴스</span>
+          </button>
+        ) : (
+          <h2>새로운 시선, 오늘의 이야기</h2>
+        )}
         <button className="text-button" onClick={openNews}>
           뉴스 모두 보기 →
         </button>

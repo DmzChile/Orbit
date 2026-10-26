@@ -1,25 +1,23 @@
+import { electronRuntime, openWorkspace } from "./helpers";
 import { test, expect, _electron as electron } from "@playwright/test";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 
-test("UX-02/08/SHIP-01 · sidebar fills scrollable pages, update notice and trusted IPC", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "orbit-sidebar-update-"));
+test("UX-02/08/SHIP-01 · banner window fits scrollable pages, update notice and trusted IPC", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "orbit-workspace-update-"));
   const env = Object.fromEntries(
     Object.entries(process.env).filter(
       ([k, v]) => k !== "ELECTRON_RUN_AS_NODE" && v !== undefined,
     ),
   ) as Record<string, string>;
   const app = await electron.launch({
-    executablePath: resolve("node_modules/electron/dist/electron.exe"),
-    args: ["."],
+    ...electronRuntime(),
     env: { ...env, ORBIT_DATA_DIR: directory },
   });
   try {
     const page = await app.firstWindow();
-    await page
-      .getByRole("button", { name: "설정 및 연결", exact: true })
-      .click();
+    await openWorkspace(page, "설정 및 연결");
     await expect(
       page.getByRole("button", { name: "업데이트 확인", exact: true }),
     ).toBeDisabled();
@@ -49,35 +47,27 @@ test("UX-02/08/SHIP-01 · sidebar fills scrollable pages, update notice and trus
       await expect
         .poll(() =>
           page.evaluate(() => {
-            const main = document.querySelector("main")!,
-              aside = document.querySelector("aside")!;
+            const main = document.querySelector("main")!;
+            const panel = document.querySelector(".workspace-window")!;
             main.scrollTop = main.scrollHeight;
-            const m = main.getBoundingClientRect(),
-              a = aside.getBoundingClientRect();
+            const bounds = panel.getBoundingClientRect();
             return {
-              aligned:
-                Math.abs(m.bottom - a.bottom) < 2 &&
-                Math.abs(m.top - a.top) < 2,
+              windowFits:
+                bounds.top >= 0 && bounds.bottom <= window.innerHeight + 1,
               documentFits:
                 document.documentElement.scrollHeight <= window.innerHeight + 1,
               scrolls: main.scrollTop > 0,
-              main: [
-                m.top,
-                m.bottom,
-                main.scrollHeight,
-                main.clientHeight,
-                main.scrollTop,
-              ],
-              aside: [a.top, a.bottom],
-              viewport: window.innerHeight,
-              document: document.documentElement.scrollHeight,
+              widthFits: main.scrollWidth <= main.clientWidth + 1,
             };
           }),
         )
-        .toMatchObject({ aligned: true, documentFits: true, scrolls: true });
-      await page
-        .getByRole("button", { name: "설정 및 연결", exact: true })
-        .click();
+        .toMatchObject({
+          windowFits: true,
+          documentFits: true,
+          scrolls: true,
+          widthFits: true,
+        });
+      await openWorkspace(page, "설정 및 연결");
     }
     await app.evaluate(({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows()[0];
@@ -122,7 +112,9 @@ test("UX-02/08/SHIP-01 · sidebar fills scrollable pages, update notice and trus
     await expect(
       banner.getByRole("button", { name: "재시작 및 설치", exact: true }),
     ).toBeVisible();
-    await page.screenshot({ path: "work-evidence/issue-1-sidebar-update.png" });
+    await page.screenshot({
+      path: "work-evidence/banner-workspace-update.png",
+    });
   } finally {
     await app.close();
   }

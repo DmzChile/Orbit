@@ -1,6 +1,12 @@
+import {
+  electronRuntime,
+  openWorkspace,
+  returnToBanners,
+  enableReducedMotion,
+} from "./helpers";
 import { test, expect, _electron as electron } from "@playwright/test";
 import { mkdtemp, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { initialState, articleSchema } from "../../src/domain/model";
 import { NEWS_TOPICS } from "../../src/domain/news";
@@ -31,24 +37,20 @@ test("APP-03/NEWS-02/UX-06 · isolated fixture politics filter, balanced rotatio
     ),
   ) as Record<string, string>;
   const app = await electron.launch({
-    executablePath: resolve("node_modules/electron/dist/electron.exe"),
-    args: ["."],
+    ...electronRuntime(),
     env: { ...env, ORBIT_DATA_DIR: directory },
   });
   try {
     const page = await app.firstWindow();
     await page.clock.install();
     await page.emulateMedia({ reducedMotion: "no-preference" });
-    await page.getByRole("button", { name: "뉴스", exact: true }).click();
+    await openWorkspace(page, "뉴스");
     await page.getByRole("button", { name: "정치", exact: true }).click();
     await expect(page.locator(".article-list .inbox-item")).toHaveCount(1);
     await expect(page.locator(".reader h2")).toHaveText(
       "[테스트 fixture] 정치 기사",
     );
-    await page
-      .getByRole("button", { name: "오늘", exact: true })
-      .first()
-      .click();
+    await returnToBanners(page);
     await page
       .getByRole("heading", { name: "오늘도, 나의 궤도대로.", exact: true })
       .click();
@@ -86,10 +88,7 @@ test("APP-03/NEWS-02/UX-06 · isolated fixture politics filter, balanced rotatio
     await expect(page.locator(".reader h2")).toHaveText(
       "[테스트 fixture] 테크 기사",
     );
-    await page
-      .getByRole("button", { name: "오늘", exact: true })
-      .first()
-      .click();
+    await returnToBanners(page);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page
       .getByRole("heading", { name: "오늘도, 나의 궤도대로.", exact: true })
@@ -106,9 +105,7 @@ test("APP-03/NEWS-02/UX-06 · isolated fixture politics filter, balanced rotatio
     await page.getByRole("button", { name: "다음 뉴스", exact: true }).click();
     await expect(page.locator(".story .pill")).toHaveText("우주");
     await page.emulateMedia({ reducedMotion: "no-preference" });
-    await page
-      .getByRole("checkbox", { name: "모션 줄이기", exact: true })
-      .check();
+    await enableReducedMotion(page);
     await expect(
       page.getByRole("button", {
         name: "모션 줄이기로 자동 전환 꺼짐",

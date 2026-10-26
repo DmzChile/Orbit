@@ -5,19 +5,22 @@ import type {
   OrbitAPI,
   Settings,
   Article,
-  Board,
   Request,
 } from "../domain/model";
 import { CalendarPage } from "./Calendar";
-import { BoardPage, Widgets } from "./Widgets";
 import { Automations, Results } from "./Work";
 import { SettingsPage } from "./Settings";
 import { NewsPage } from "./News";
 import { Icon } from "./icons";
-import { NewsSpotlight } from "./NewsSpotlight";
+import {
+  BannerWorkspace,
+  PersonalSpace,
+  useWorkspaceNavigation,
+} from "./Workspace";
 import { UpdatePanel } from "./Updates";
 import { agenda, localDate, monthCells } from "../domain/calendar";
 import "./style.css";
+import "./workspace.css";
 import { inQuietHours } from "../domain/notifications";
 declare global {
   interface Window {
@@ -101,12 +104,12 @@ export function Pill({
 }
 export function App() {
   const [state, setState] = useState<AppState>(),
-    [page, setPage] = useState("home"),
     [message, setMessage] = useState(""),
     [fatal, setFatal] = useState(""),
     [article, setArticle] = useState<Article>(),
     [articleNavigation, setArticleNavigation] = useState(0),
     [calendarDate, setCalendarDate] = useState<string>(),
+    [calendarNavigation, setCalendarNavigation] = useState(0),
     [draftRef, setDraftRef] = useState<Request["refs"]>([]),
     [requestSeed, setRequestSeed] = useState<Request>(),
     [resultId, setResultId] = useState<string>(),
@@ -117,6 +120,10 @@ export function App() {
       login?: string;
       version: string;
     }>();
+  const navigation = useWorkspaceNavigation(
+    state?.settings.reduceMotion ?? false,
+  );
+  const { navigate: go } = navigation;
   const previousRuns = useRef<Map<string, string> | null>(null);
   const reload = useCallback(async () => {
     try {
@@ -131,13 +138,13 @@ export function App() {
     const off = window.orbit?.onChange(() => void reload());
     const nav = window.orbit?.onNavigate((id) => {
       setResultId(id);
-      setPage("results");
+      go("results");
     });
     return () => {
       off?.();
       nav?.();
     };
-  }, [reload]);
+  }, [reload, go]);
   useEffect(() => {
     if (!message) return;
     const t = setTimeout(() => setMessage(""), 7000);
@@ -150,10 +157,6 @@ export function App() {
       document.documentElement.lang = "ko";
     }
   }, [state?.settings.reduceMotion, state?.settings.fontScale]);
-  function go(value: string) {
-    setPage(value);
-    document.getElementById("content")?.scrollTo({ top: 0 });
-  }
   async function saveSettings(settings: Settings) {
     const previous = state;
     setState((s) => (s ? { ...s, settings } : s));
@@ -198,10 +201,6 @@ export function App() {
         {fatal && <Button onClick={() => void reload()}>다시 시도</Button>}
       </div>
     );
-  const board =
-      state.boards.find((b) => b.id === state.settings.selectedBoard) ??
-      state.boards[0],
-    unread = state.runs.filter((r) => !r.readAt).length;
   return (
     <div className="app">
       <header className="titlebar">
@@ -210,176 +209,100 @@ export function App() {
         <span className="caption-space" />
       </header>
       <UpdatePanel banner />
-      <div className="shell">
-        <aside>
-          <div className="brand">
-            <div className="mark">o</div>
-            <span>Orbit</span>
-          </div>
-          <div className="eyebrow">WORKSPACE</div>
-          <nav aria-label="주 메뉴">
-            {[
-              ["home", "home", "오늘"],
-              ["news", "news", "뉴스"],
-              ["calendar", "calendar", "캘린더"],
-              ["custom", "grid", "내 공간"],
-              ["auto", "spark", "자동화"],
-              ["results", "inbox", "결과함"],
-            ].map(([key, icon, label]) => (
-              <button
-                className={`nav ${page === key ? "active" : ""}`}
-                aria-label={label}
-                aria-current={page === key ? "page" : undefined}
-                onClick={() => go(key)}
-                key={key}
-              >
-                <Icon name={icon} />
-                <span>
-                  {label}
-                  {key === "results" && unread > 0 && (
-                    <b className="badge">{unread}</b>
-                  )}
-                </span>
-              </button>
-            ))}
-          </nav>
-          <button className="btn quiet" onClick={() => go("custom")}>
-            ＋ <span className="browse-label">위젯 둘러보기</span>
-          </button>
-          <div className="connect">
-            <Icon name="github" />
-            <b>개인 워크스페이스</b>
-            <small>
-              {connection?.github
-                ? `GitHub · ${connection.login}`
-                : "GitHub 연결 필요"}
-            </small>
-            {connection?.error && (
-              <small className="error">{connection.error}</small>
-            )}
-            <button className="text-button" onClick={() => go("settings")}>
-              {connection?.github ? "연결 관리" : "연결하기"} →
-            </button>
-          </div>
-          <div className="sidebar-actions">
-            <button
-              className={`nav ${page === "settings" ? "active" : ""}`}
-              aria-label="설정 및 연결"
-              onClick={() => go("settings")}
-            >
-              <Icon name="settings" />
-              <span>설정 및 연결</span>
-            </button>
-            <label>
-              <input
-                type="checkbox"
-                checked={state.settings.reduceMotion}
-                onChange={(e) =>
-                  void saveSettings({
-                    ...state.settings,
-                    reduceMotion: e.target.checked,
-                  }).catch((e) => setMessage(errorText(e)))
-                }
-              />
-              모션 줄이기
-            </label>
-          </div>
-          <div className="profile">
-            <span className="avatar">O</span>
-            <div>
-              나의 워크스페이스
-              <br />
-              <small>Personal · {connection?.version}</small>
-            </div>
-          </div>
-        </aside>
-        <main className="content" id="content" tabIndex={-1}>
-          {page === "home" && (
-            <Home
-              state={state}
-              board={board}
-              go={go}
-              openCalendar={(date) => {
-                setCalendarDate(date);
-                go("calendar");
-              }}
-              openArticle={(a) => {
-                setArticle(a);
-                setArticleNavigation((value) => value + 1);
-                go("news");
-              }}
-              feedback={setMessage}
-              openResult={(id) => {
-                setResultId(id);
-                go("results");
-              }}
-            />
-          )}
-          <div hidden={page !== "news"}>
-            <NewsPage
-              key={articleNavigation}
-              state={state}
-              selected={article}
-              onSelected={setArticle}
-              ask={ask}
-              feedback={setMessage}
-            />
-          </div>
-          {page === "calendar" && (
-            <CalendarPage
-              state={state}
-              feedback={setMessage}
-              initialDate={calendarDate}
-            />
-          )}
-          {page === "custom" && (
-            <BoardPage
-              key={board.id}
-              state={state}
-              board={board}
-              feedback={setMessage}
-            />
-          )}
-          {page === "auto" && (
-            <Automations
-              state={state}
-              refs={draftRef}
-              seed={requestSeed}
-              feedback={setMessage}
-            />
-          )}
-          {page === "results" && (
-            <Results
-              state={state}
-              selectedId={resultId}
-              onSelected={setResultId}
-              feedback={setMessage}
-              again={(r) => {
-                const now = new Date().toISOString();
-                setRequestSeed({
-                  ...r,
-                  id: crypto.randomUUID(),
-                  version: 1,
-                  createdAt: now,
-                  updatedAt: now,
-                  remoteIssue: undefined,
-                  remoteUpdatedAt: undefined,
-                });
-                setDraftRef(r.refs);
-                go("auto");
-              }}
-            />
-          )}
-          {page === "settings" && (
-            <SettingsPage
-              key={state.workspaceId}
-              state={state}
-              feedback={setMessage}
-              save={saveSettings}
-            />
-          )}
-        </main>
-      </div>
+      <BannerWorkspace
+        navigation={navigation}
+        state={state}
+        connection={connection}
+        openArticle={(a) => {
+          setArticle(a);
+          setArticleNavigation((value) => value + 1);
+          go("news", true);
+        }}
+      >
+        {(page) => {
+          switch (page) {
+            case "home":
+              return (
+                <Home
+                  state={state}
+                  go={go}
+                  openCalendar={(date) => {
+                    setCalendarDate(date);
+                    setCalendarNavigation((value) => value + 1);
+                    go("calendar");
+                  }}
+                  openResult={(id) => {
+                    setResultId(id);
+                    go("results");
+                  }}
+                />
+              );
+            case "news":
+              return (
+                <NewsPage
+                  key={articleNavigation}
+                  state={state}
+                  selected={article}
+                  onSelected={setArticle}
+                  ask={ask}
+                  feedback={setMessage}
+                />
+              );
+            case "calendar":
+              return (
+                <CalendarPage
+                  key={calendarNavigation}
+                  state={state}
+                  feedback={setMessage}
+                  initialDate={calendarDate}
+                />
+              );
+            case "custom":
+              return <PersonalSpace />;
+            case "auto":
+              return (
+                <Automations
+                  state={state}
+                  refs={draftRef}
+                  seed={requestSeed}
+                  feedback={setMessage}
+                />
+              );
+            case "results":
+              return (
+                <Results
+                  state={state}
+                  selectedId={resultId}
+                  onSelected={setResultId}
+                  feedback={setMessage}
+                  again={(r) => {
+                    const now = new Date().toISOString();
+                    setRequestSeed({
+                      ...r,
+                      id: crypto.randomUUID(),
+                      version: 1,
+                      createdAt: now,
+                      updatedAt: now,
+                      remoteIssue: undefined,
+                      remoteUpdatedAt: undefined,
+                    });
+                    setDraftRef(r.refs);
+                    go("auto");
+                  }}
+                />
+              );
+            case "settings":
+              return (
+                <SettingsPage
+                  key={state.workspaceId}
+                  state={state}
+                  feedback={setMessage}
+                  save={saveSettings}
+                />
+              );
+          }
+        }}
+      </BannerWorkspace>
       {message && (
         <div className="toast" role="status">
           <Icon name="check" />
@@ -394,18 +317,12 @@ export function App() {
 }
 function Home({
   state,
-  board,
   go,
-  openArticle,
-  feedback,
   openResult,
   openCalendar,
 }: {
   state: AppState;
-  board: Board;
   go: (p: string) => void;
-  openArticle: (a: Article) => void;
-  feedback: Feedback;
   openResult: (id: string) => void;
   openCalendar: (date: string) => void;
 }) {
@@ -429,14 +346,40 @@ function Home({
           </Button>
         }
       />
-      <div className="top-grid">
-        <NewsSpotlight
-          articles={state.articles}
-          fetchedAt={state.newsFetchedAt}
-          reduceMotion={state.settings.reduceMotion}
-          openArticle={openArticle}
-          openNews={() => go("news")}
-        />
+      <div className="today-overview">
+        <section className="card today-agenda">
+          <div className="row between">
+            <h2>오늘의 일정</h2>
+            <Pill>{items.length}개</Pill>
+          </div>
+          {items.length ? (
+            items.map((item) => (
+              <button
+                className="today-agenda-item"
+                key={`${item.event.id}:${item.start}`}
+                onClick={() => openCalendar(today)}
+              >
+                <time>
+                  {new Date(item.start).toLocaleTimeString("ko-KR", {
+                    timeZone: state.settings.timezone,
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </time>
+                <span>
+                  <strong>{item.event.title}</strong>
+                  <small>{item.event.category}</small>
+                </span>
+                <Icon name="arrow" />
+              </button>
+            ))
+          ) : (
+            <Empty>
+              아직 오늘 일정이 없어요. 여유로운 하루에 계획을 더해보세요.
+            </Empty>
+          )}
+          <Button onClick={() => openCalendar(today)}>＋ 일정 추가</Button>
+        </section>
         <section className="card calendar-mini">
           <div className="row between month">
             <h3>
@@ -494,19 +437,6 @@ function Home({
           </div>
         </section>
       </div>
-      <div className="section-head">
-        <h2>{board.name}</h2>
-        <small>나에게 필요한 것만, 한곳에.</small>
-        <Button onClick={() => go("custom")}>공간 편집</Button>
-      </div>
-      <Widgets state={state} board={board} feedback={feedback} />
-      {!board.widgets.length && (
-        <button className="card add-widget full" onClick={() => go("custom")}>
-          <Icon name="plus" />
-          <h3>나만의 공간을 만들어보세요.</h3>
-          <p>금융 · 학습 · GitHub · 우주 · 메모</p>
-        </button>
-      )}
       <div className="card result-strip">
         <Icon name="inbox" />
         <div>

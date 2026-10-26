@@ -1,3 +1,4 @@
+import { electronRuntime, openWorkspace } from "./helpers";
 import { test, expect, _electron as electron } from "@playwright/test";
 import { mkdtemp, readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -13,16 +14,12 @@ test("E2E-01 · actual public news, saved article, restart and request reference
   delete env.ELECTRON_RUN_AS_NODE;
   env.ORBIT_DATA_DIR = directory;
   let app = await electron.launch({
-    executablePath: join(
-      process.cwd(),
-      "node_modules/electron/dist/electron.exe",
-    ),
-    args: ["."],
+    ...electronRuntime(),
     env,
   });
   try {
     let page = await app.firstWindow();
-    await page.getByRole("button", { name: "뉴스", exact: true }).click();
+    await openWorkspace(page, "뉴스");
     await page.getByRole("button", { name: "새로고침", exact: true }).click();
     await expect(page.locator(".article-list .inbox-item").first()).toBeVisible(
       { timeout: 100000 },
@@ -63,15 +60,11 @@ test("E2E-01 · actual public news, saved article, restart and request reference
     expect(data.articles[0].source).toBe("동아일보");
     expect(data.settings.readerScale).toBeGreaterThan(1);
     app = await electron.launch({
-      executablePath: join(
-        process.cwd(),
-        "node_modules/electron/dist/electron.exe",
-      ),
-      args: ["."],
+      ...electronRuntime(),
       env,
     });
     page = await app.firstWindow();
-    await page.getByRole("button", { name: "뉴스", exact: true }).click();
+    await openWorkspace(page, "뉴스");
     await page
       .getByRole("checkbox", { name: "저장한 기사만", exact: true })
       .check();

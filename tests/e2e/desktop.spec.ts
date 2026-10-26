@@ -1,10 +1,17 @@
+import { initialState, widgetSchema } from "../../src/domain/model";
+import {
+  electronRuntime,
+  openWorkspace,
+  returnToBanners,
+  enableReducedMotion,
+} from "./helpers";
 import {
   test,
   expect,
   _electron as electron,
   type ElectronApplication,
 } from "@playwright/test";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 const activeApps: ElectronApplication[] = [];
@@ -20,18 +27,26 @@ const launch = async (dir: string) => {
   env.ORBIT_DATA_DIR = dir;
   delete env.ELECTRON_RUN_AS_NODE;
   const app = await electron.launch({
-    executablePath: join(
-      process.cwd(),
-      "node_modules/electron/dist/electron.exe",
-    ),
-    args: ["."],
+    ...electronRuntime(),
     env,
   });
   activeApps.push(app);
   return app;
 };
-test("E2E-02/03/08 · Windows offline CRUD, board, restart, zoom and reduced motion", async () => {
+test("E2E-02/03/08 · desktop offline CRUD, retained board data, banner navigation, restart, zoom and reduced motion", async () => {
   const dir = await mkdtemp(join(tmpdir(), "orbit-e2e-"));
+  const seeded = initialState();
+  seeded.boards[0].widgets.push(
+    widgetSchema.parse({
+      id: "retained-note",
+      type: "note",
+      size: "M",
+      order: 0,
+      config: { note: "UI에서 숨겨도 보존되는 메모" },
+      schemaVersion: 1,
+    }),
+  );
+  await writeFile(join(dir, "state.json"), JSON.stringify(seeded));
   let app: ElectronApplication = await launch(dir);
   let page = await app.firstWindow();
   const errors: string[] = [];
@@ -40,7 +55,7 @@ test("E2E-02/03/08 · Windows offline CRUD, board, restart, zoom and reduced mot
     page.getByRole("heading", { name: "오늘도, 나의 궤도대로." }),
   ).toBeVisible();
   await page.screenshot({ path: "test-results/windows-today.png" });
-  await page.getByRole("button", { name: "캘린더", exact: true }).click();
+  await openWorkspace(page, "캘린더");
   await page
     .getByRole("textbox", { name: "일정 제목", exact: true })
     .fill("긴 한국어 일정 · 학습과 구현 확인");
@@ -48,51 +63,36 @@ test("E2E-02/03/08 · Windows offline CRUD, board, restart, zoom and reduced mot
   await page.getByLabel("종료 일시").fill("2028-03-01T00:30");
   await page.getByRole("button", { name: "일정 저장", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("저장했어요");
-  await page.getByRole("button", { name: "내 공간", exact: true }).click();
-  await page
-    .locator(".library-card")
-    .filter({ hasText: "마켓 워치" })
-    .dragTo(page.locator(".drop-target"));
-  await expect(page.locator(".workspace-grid .widget")).toHaveCount(1);
-  await page
-    .locator(".library-card")
-    .filter({ hasText: "빠른 메모" })
-    .getByRole("button", { name: "＋ 추가" })
-    .click();
-  await page
-    .getByRole("textbox", { name: "빠른 메모", exact: true })
-    .fill("재시작 후에도 남는 실제 메모");
-  await page.getByRole("button", { name: "메모 저장" }).click();
-  await page.locator(".widget-slot").nth(1).focus();
-  await page.keyboard.press("Alt+ArrowLeft");
-  await expect(page.locator(".widget-slot").first()).toContainText("빠른 메모");
-  await page
-    .getByRole("combobox", { name: "빠른 메모 크기" })
-    .selectOption("L");
-  await page.getByRole("button", { name: "편집 완료", exact: true }).click();
-  await expect(page.locator(".toast")).toContainText("공간을 저장했어요");
-  await page.screenshot({ path: "test-results/windows-board.png" });
-  await page.getByRole("button", { name: "오늘", exact: true }).first().click();
+  await openWorkspace(page, "내 공간");
+  await expect(page.locator(".personal-space")).toBeVisible();
   await expect(
-    page.getByRole("textbox", { name: "빠른 메모", exact: true }),
-  ).toHaveValue("재시작 후에도 남는 실제 메모");
-  await page
-    .getByRole("checkbox", { name: "모션 줄이기", exact: true })
-    .check();
+    page.locator(".workspace-grid, .widget, .library-card"),
+  ).toHaveCount(0);
+  await returnToBanners(page);
+  await expect(
+    page
+      .getByRole("navigation", { name: "공간 선택" })
+      .getByRole("button", { name: "내 공간", exact: true }),
+  ).toBeFocused();
+  await enableReducedMotion(page);
   await expect(page.locator("body")).toHaveClass("reduce");
   await app.close();
   const state = JSON.parse(await readFile(join(dir, "state.json"), "utf8"));
   expect(state.events[0].start).toBe("2028-02-29T14:30:00Z");
   expect(state.boards[0].widgets[0].config.note).toBe(
-    "재시작 후에도 남는 실제 메모",
+    "UI에서 숨겨도 보존되는 메모",
   );
   app = await launch(dir);
   page = await app.firstWindow();
+  await expect(page.locator(".banner-workspace")).toHaveAttribute(
+    "data-view",
+    "hub",
+  );
   await expect(
-    page.getByRole("textbox", { name: "빠른 메모", exact: true }),
-  ).toHaveValue("재시작 후에도 남는 실제 메모");
+    page.locator(".workspace-grid, .widget, .library-card"),
+  ).toHaveCount(0);
   await expect(page.locator("body")).toHaveClass("reduce");
-  await page.getByRole("button", { name: "캘린더", exact: true }).click();
+  await openWorkspace(page, "캘린더");
   for (const zoom of [1, 1.5, 2]) {
     await app.evaluate(({ BrowserWindow }, factor) => {
       const w = BrowserWindow.getAllWindows()[0];
@@ -129,11 +129,11 @@ test("SEC-01/02/03 · renderer boundaries and validation errors", async () => {
     window.orbit.call("activity", "unknown/repo"),
   );
   expect(denied.ok).toBe(false);
-  await page.getByRole("button", { name: "뉴스", exact: true }).click();
+  await openWorkspace(page, "뉴스");
   await expect(
     page.getByText("아직 뉴스가 없어요.", { exact: false }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "자동화", exact: true }).click();
+  await openWorkspace(page, "자동화");
   await expect(
     page.getByRole("button", { name: "GitHub에 등록", exact: true }),
   ).toBeDisabled();
@@ -155,7 +155,7 @@ test("CAL-02/03/07 · weekly occurrence edit and confirmed delete keep series ex
       .map((k) => parts.find((p) => p.type === k)!.value)
       .join("-");
   });
-  await page.getByRole("button", { name: "캘린더", exact: true }).click();
+  await openWorkspace(page, "캘린더");
   await page
     .getByRole("textbox", { name: "일정 제목", exact: true })
     .fill("반복 학습 원본");
@@ -253,9 +253,7 @@ test("UX-05/06 · reference orbit trails reuse the same paths and respect reduce
   await expect(trail).toHaveCSS("visibility", "hidden");
   await expect(scene.locator(".planet")).toHaveCount(1);
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page
-    .getByRole("checkbox", { name: "모션 줄이기", exact: true })
-    .check();
+  await enableReducedMotion(page);
   await expect(trail).toHaveCSS("animation-name", "none");
   await expect(trail).toHaveCSS("visibility", "hidden");
   await app.evaluate(({ BrowserWindow }) => {
