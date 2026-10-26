@@ -11,6 +11,9 @@
   padding: 26px 32px 20px;
   scrollbar-gutter: stable;
 }
+.banner-hub[inert] {
+  overflow: hidden;
+}
 .banner-hub-heading,
 .banner-hub-footer {
   display: flex;
@@ -344,6 +347,8 @@
   --muted: #b8cbd6;
   --blue: #d4eee7;
   --soft: #315469;
+  position: relative;
+  overflow: hidden;
   padding: 20px 22px 16px;
   min-height: 290px;
   height: 100%;
@@ -381,11 +386,19 @@
   color: #c1dfdf;
 }
 .news-banner .story {
+  position: static;
+  overflow: visible;
   min-height: 132px;
   flex: 1;
   padding: 12px 0;
   background: transparent;
   border-radius: 0;
+}
+.news-banner > .row,
+.news-banner .spotlight-topics,
+.news-banner .spotlight-footer {
+  position: relative;
+  z-index: 1;
 }
 .news-banner .story:hover {
   filter: none;

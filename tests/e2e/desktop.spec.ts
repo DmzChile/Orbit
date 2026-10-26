@@ -39,7 +39,7 @@ test("E2E-02/03/08 · desktop offline CRUD, retained board data, banner navigati
   seeded.boards[0].widgets.push(
     widgetSchema.parse({
       id: "retained-note",
-      type: "note",
+      type: "notes",
       size: "M",
       order: 0,
       config: { note: "UI에서 숨겨도 보존되는 메모" },
