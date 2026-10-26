@@ -112,6 +112,7 @@ export function App() {
     [calendarNavigation, setCalendarNavigation] = useState(0),
     [draftRef, setDraftRef] = useState<Request["refs"]>([]),
     [requestSeed, setRequestSeed] = useState<Request>(),
+    [requestNavigation, setRequestNavigation] = useState(0),
     [resultId, setResultId] = useState<string>(),
     [connection, setConnection] = useState<{
       github: boolean;
@@ -190,7 +191,14 @@ export function App() {
   const ask = (a: Article) => {
     setRequestSeed(undefined);
     setDraftRef([{ title: a.title, url: a.url, topic: a.topics.join(", ") }]);
-    go("auto");
+    setRequestNavigation((value) => value + 1);
+    go("auto", true);
+  };
+  const newRequest = () => {
+    setRequestSeed(undefined);
+    setDraftRef([]);
+    setRequestNavigation((value) => value + 1);
+    go("auto", true);
   };
   if (!state)
     return (
@@ -226,6 +234,7 @@ export function App() {
                 <Home
                   state={state}
                   go={go}
+                  newRequest={newRequest}
                   openCalendar={(date) => {
                     setCalendarDate(date);
                     setCalendarNavigation((value) => value + 1);
@@ -262,6 +271,7 @@ export function App() {
             case "auto":
               return (
                 <Automations
+                  key={requestNavigation}
                   state={state}
                   refs={draftRef}
                   seed={requestSeed}
@@ -287,7 +297,8 @@ export function App() {
                       remoteUpdatedAt: undefined,
                     });
                     setDraftRef(r.refs);
-                    go("auto");
+                    setRequestNavigation((value) => value + 1);
+                    go("auto", true);
                   }}
                 />
               );
@@ -320,11 +331,13 @@ function Home({
   go,
   openResult,
   openCalendar,
+  newRequest,
 }: {
   state: AppState;
   go: (p: string) => void;
   openResult: (id: string) => void;
   openCalendar: (date: string) => void;
+  newRequest: () => void;
 }) {
   const today = localDate(new Date().toISOString(), state.settings.timezone),
     date = new Date(`${today}T12:00:00`),
@@ -341,7 +354,7 @@ function Home({
         title="오늘도, 나의 궤도대로."
         sub={`${date.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" })} · 일정 ${items.length}개 · 새 결과 ${state.runs.filter((r) => !r.readAt).length}개`}
         action={
-          <Button primary onClick={() => go("auto")}>
+          <Button primary onClick={newRequest}>
             ＋ 새로운 요청
           </Button>
         }
@@ -450,7 +463,7 @@ function Home({
           </small>
         </div>
         <div className="actions">
-          <Button onClick={() => (last ? openResult(last.id) : go("auto"))}>
+          <Button onClick={() => (last ? openResult(last.id) : newRequest())}>
             {last ? "결과 확인" : "요청 작성"} →
           </Button>
         </div>

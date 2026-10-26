@@ -90,6 +90,13 @@ test("UX-09/10 · seven banners morph in both directions and restore keyboard fo
       page.getByRole("textbox", { name: "어떤 작업을 맡길까요?", exact: true }),
     ).toHaveValue("전환 후에도 보존할 요청 내용");
     await page.screenshot({ path: "test-results/banner-automation.png" });
+    await openWorkspace(page, "오늘");
+    await page
+      .getByRole("button", { name: "＋ 새로운 요청", exact: true })
+      .click();
+    await expect(
+      page.getByRole("textbox", { name: "어떤 작업을 맡길까요?", exact: true }),
+    ).toHaveValue("");
     expect(errors).toEqual([]);
   } finally {
     await app.close();

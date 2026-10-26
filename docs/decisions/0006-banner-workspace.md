@@ -27,7 +27,7 @@
 - https://developer.mozilla.org/en-US/docs/Web/API/Document/startViewTransition
 - https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/::view-transition-group
 
-허브를 DOM에 유지해 스크롤과 원래 배너 위치를 보존한다. 확장 창이 열리면 허브는 inert/aria-hidden으로 입력과 접근성 탐색에서 제외한다. 방문한 페이지는 숨겨 보관하므로 일반적인 뒤로가기/재진입으로 작성 중인 일정·요청·뉴스 필터를 잃지 않는다. 날짜나 기사에 대한 명시적 새 진입은 해당 선택을 연다.
+허브를 DOM에 유지해 스크롤과 원래 배너 위치를 보존한다. 확장 창이 열리면 허브는 inert/aria-hidden으로 입력과 접근성 탐색에서 제외한다. 방문한 페이지는 숨겨 보관하므로 일반적인 뒤로가기/재진입으로 작성 중인 일정·요청·뉴스 필터를 잃지 않는다. 날짜나 기사에 대한 명시적 새 진입은 해당 선택을 연다. 새 요청·기사에서 요청·결과에서 다시 요청은 보관된 편집 상태 대신 사용자가 선택한 새 초안을 연다.
 
 뒤로 버튼·Escape·Alt+왼쪽 화살표로 허브에 돌아가고 원래 배너 버튼으로 포커스를 복원한다. 열린 dialog의 Escape는 가로채지 않는다. 빠른 재이동/취소는 이전 전환을 skip하고 최신 요청만 DOM에 반영한다. OS 또는 앱 모션 감소, 숨겨진 문서, API 미지원에서는 즉시 이동하며 포커스와 기능을 유지한다. 창 크기 변경 중에는 진행 중인 전환을 종료하고 새 레이아웃을 사용한다.
 
