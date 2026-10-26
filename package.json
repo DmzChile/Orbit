@@ -42,6 +42,7 @@
       "icon": "resources/orbit.ico"
     },
     "nsis": {
+      "artifactName": "Orbit-Setup-${version}.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": false,

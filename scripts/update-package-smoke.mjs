@@ -5,15 +5,21 @@ import { createServer } from "node:http";
 import { createReadStream } from "node:fs";
 import { mkdtemp, mkdir, readFile, writeFile, stat } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 
 const output = resolve("work-evidence");
 await mkdir(output, { recursive: true });
 const directory = await mkdtemp(join(output, "update-fixture-"));
 const pkg = JSON.parse(await readFile("package.json", "utf8"));
-const installer = resolve(`release/Orbit Setup ${pkg.version}.exe`);
+const installer = resolve(`release/Orbit-Setup-${pkg.version}.exe`);
 const bytes = await readFile(installer);
 const sha512 = createHash("sha512").update(bytes).digest("base64");
+const manifest = await readFile("release/latest.yml", "utf8");
+expect(manifest).toContain(`version: ${pkg.version}\n`);
+expect(manifest).toContain(`path: ${basename(installer)}\n`);
+expect(manifest).toContain(`    sha512: ${sha512}\n`);
+expect(manifest).toContain(`    size: ${bytes.length}\n`);
+expect((await stat(`${installer}.blockmap`)).isFile()).toBe(true);
 let mode = "offline";
 const server = createServer((req, res) => {
   if (mode === "offline") {
@@ -22,14 +28,17 @@ const server = createServer((req, res) => {
     return;
   }
   if (req.url?.startsWith("/latest.yml")) {
-    const hash =
-      mode === "corrupt" ? Buffer.alloc(64).toString("base64") : sha512;
     res.setHeader("Content-Type", "text/yaml");
-    // Only the loopback fixture uses this deliberately newer metadata version.
+    // Exercise the build's real paths/hashes; only this fixture raises the version.
     res.end(
-      `version: 99.0.0\nfiles:\n  - url: fixture.exe\n    sha512: ${hash}\n    size: ${bytes.length}\npath: fixture.exe\nsha512: ${hash}\nreleaseDate: '2026-10-25T00:00:00.000Z'\n`,
+      manifest
+        .replace(/^version: .+$/m, "version: 99.0.0")
+        .replaceAll(
+          sha512,
+          mode === "corrupt" ? Buffer.alloc(64).toString("base64") : sha512,
+        ),
     );
-  } else if (req.url?.startsWith("/fixture.exe")) {
+  } else if (req.url?.startsWith(`/${basename(installer)}`)) {
     res.setHeader("Content-Length", bytes.length);
     createReadStream(installer).pipe(res);
   } else {
