@@ -151,6 +151,7 @@ export function useWorkspaceNavigation(reduceMotion: boolean) {
         transition.current = null;
         clearNames();
         delete document.documentElement.dataset.orbitNavigation;
+        delete document.documentElement.dataset.orbitTheme;
         setPhase("idle");
         requestAnimationFrame(() => {
           if (!alive.current || ticket !== sequence.current) return;
@@ -188,6 +189,8 @@ export function useWorkspaceNavigation(reduceMotion: boolean) {
             ? "opening"
             : "switching";
       document.documentElement.dataset.orbitNavigation = direction;
+      document.documentElement.dataset.orbitTheme =
+        next === "hub" ? returning : next;
       setPhase(direction);
       mark(previous, next);
       try {
@@ -233,6 +236,7 @@ export function useWorkspaceNavigation(reduceMotion: boolean) {
       transition.current?.skipTransition();
       clearNames();
       delete document.documentElement.dataset.orbitNavigation;
+      delete document.documentElement.dataset.orbitTheme;
       media.removeEventListener("change", motion);
       window.removeEventListener("resize", resize);
       window.removeEventListener("keydown", keydown);
