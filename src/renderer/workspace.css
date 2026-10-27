@@ -747,6 +747,23 @@
 ::view-transition-group(orbit-workspace) {
   overflow: clip;
   border-radius: 22px;
+  /* The snapshots have different aspect ratios; fill the uncovered area. */
+  background-color: #eff1f4;
+}
+html[data-orbit-theme="news"]::view-transition-group(orbit-workspace) {
+  background-color: #19364c;
+}
+html[data-orbit-theme="calendar"]::view-transition-group(orbit-workspace) {
+  background-color: #f0f1fb;
+}
+html[data-orbit-theme="auto"]::view-transition-group(orbit-workspace) {
+  background-color: #f4f0f9;
+}
+html[data-orbit-theme="results"]::view-transition-group(orbit-workspace) {
+  background-color: #eef6f1;
+}
+html[data-orbit-theme="settings"]::view-transition-group(orbit-workspace) {
+  background-color: #f2f4f8;
 }
 html[data-orbit-navigation="closing"]::view-transition-group(orbit-workspace),
 html[data-orbit-navigation="closing"]::view-transition-group(orbit-planet) {
@@ -758,7 +775,7 @@ html[data-orbit-navigation="switching"]::view-transition-group(orbit-planet) {
   animation-duration: 320ms;
 }
 ::view-transition-old(orbit-workspace) {
-  animation: workspace-out 170ms ease-out both;
+  animation: workspace-out 300ms ease-out both;
   mix-blend-mode: normal;
 }
 ::view-transition-new(orbit-workspace) {
@@ -767,17 +784,28 @@ html[data-orbit-navigation="switching"]::view-transition-group(orbit-planet) {
   object-fit: none;
   object-position: left top;
 }
-html[data-orbit-navigation="closing"]::view-transition-old(orbit-workspace) {
-  animation: workspace-out 200ms ease-out both;
-}
 html[data-orbit-navigation="closing"]::view-transition-new(orbit-workspace) {
   animation: workspace-in 340ms 150ms ease-out both;
   object-fit: fill;
+}
+html[data-orbit-navigation="switching"]::view-transition-new(orbit-workspace) {
+  animation: workspace-in 240ms 40ms ease-out both;
+}
+html[data-orbit-navigation="switching"]::view-transition-old(orbit-workspace) {
+  animation: workspace-out 180ms ease-out both;
 }
 ::view-transition-old(orbit-planet),
 ::view-transition-new(orbit-planet) {
   animation-duration: 700ms;
   mix-blend-mode: normal;
+}
+html[data-orbit-navigation="closing"]::view-transition-old(orbit-planet),
+html[data-orbit-navigation="closing"]::view-transition-new(orbit-planet) {
+  animation-duration: 670ms;
+}
+html[data-orbit-navigation="switching"]::view-transition-old(orbit-planet),
+html[data-orbit-navigation="switching"]::view-transition-new(orbit-planet) {
+  animation-duration: 320ms;
 }
 ::view-transition-old(root),
 ::view-transition-new(root) {
