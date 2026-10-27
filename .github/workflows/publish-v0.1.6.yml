@@ -1,0 +1,60 @@
+name: Publish verified Orbit 0.1.6
+on:
+  push:
+    branches: ['automation/publish-v0.1.6-20261027']
+permissions:
+  actions: read
+  contents: write
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify the tested artifacts and publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: DmzChile/Orbit
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $targetSha = 'e115d6d57ec55938d23561f7ac195c09d41ba8f1'
+          $runId = '40446719538'
+          $run = gh api "repos/$env:GH_REPO/actions/runs/$runId" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $run.conclusion -ne 'success' -or $run.head_sha -ne $targetSha -or $run.event -ne 'push') {
+            throw 'The expected release commit has not passed its Windows push build.'
+          }
+          gh run download $runId --repo $env:GH_REPO --name orbit-windows-validation --dir staging
+          if ($LASTEXITCODE -ne 0) { throw 'Could not download the verified Windows artifact.' }
+          $installers = @(Get-ChildItem staging -Recurse -File -Filter 'Orbit-Setup-0.1.6.exe')
+          $blockmaps = @(Get-ChildItem staging -Recurse -File -Filter 'Orbit-Setup-0.1.6.exe.blockmap')
+          $manifests = @(Get-ChildItem staging -Recurse -File -Filter 'latest.yml')
+          if ($installers.Count -ne 1 -or $blockmaps.Count -ne 1 -or $manifests.Count -ne 1) {
+            throw 'The artifact must contain exactly one installer, blockmap, and update manifest.'
+          }
+          $installer = $installers[0]
+          $blockmap = $blockmaps[0]
+          $manifest = $manifests[0]
+          $yml = Get-Content -Raw -LiteralPath $manifest.FullName
+          $version = [regex]::Match($yml, '(?m)^version:[ \t]*(\S+)[ \t]*\r?$').Groups[1].Value
+          $path = [regex]::Match($yml, '(?m)^path:[ \t]*(\S+)[ \t]*\r?$').Groups[1].Value
+          $digest = [regex]::Match($yml, '(?m)^sha512:[ \t]*(\S+)[ \t]*\r?$').Groups[1].Value
+          $size = [regex]::Match($yml, '(?m)^[ \t]+size:[ \t]*(\d+)[ \t]*\r?$').Groups[1].Value
+          $actualDigest = [Convert]::ToBase64String([Convert]::FromHexString((Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA512).Hash))
+          if ($version -ne '0.1.6' -or $path -ne $installer.Name -or $digest -ne $actualDigest -or $size -ne [string]$installer.Length) {
+            throw 'The update manifest does not match the 0.1.6 installer.'
+          }
+          Write-Host "Verified installer size $($installer.Length) and SHA-512 $actualDigest"
+          $existingRelease = gh release view v0.1.6 --repo $env:GH_REPO --json tagName 2>$null
+          if ($LASTEXITCODE -eq 0) { throw 'A v0.1.6 release already exists; it will not be overwritten.' }
+          $existingTag = gh api "repos/$env:GH_REPO/git/ref/tags/v0.1.6" 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            $tag = $existingTag | ConvertFrom-Json
+            if ($tag.object.sha -ne $targetSha -or $tag.object.type -ne 'commit') { throw 'The existing tag points to another commit.' }
+          } else {
+            gh api --method POST "repos/$env:GH_REPO/git/refs" -f 'ref=refs/tags/v0.1.6' -f "sha=$targetSha" | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Could not create the v0.1.6 tag.' }
+          }
+          gh release create v0.1.6 $installer.FullName $blockmap.FullName $manifest.FullName --repo $env:GH_REPO --verify-tag --latest --title 'Orbit v0.1.6 — 배너 전환 수정' --notes-file 'docs/releases/v0.1.6.md'
+          if ($LASTEXITCODE -ne 0) { throw 'The verified release could not be published.' }
