@@ -1,6 +1,6 @@
 {
   "name": "orbit-desktop",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "private": true,
   "description": "Orbit — Windows personal workspace",
   "author": "Orbit contributors",
@@ -42,6 +42,7 @@
       "icon": "resources/orbit.ico"
     },
     "nsis": {
+      "artifactName": "Orbit-Setup-${version}.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": false,
